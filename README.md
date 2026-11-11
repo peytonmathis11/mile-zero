@@ -1,19 +1,21 @@
-# MILE Ø v0.7 — Shared calendar & runner metrics (beta)
+# MILE Ø v0.8 — Trends & Weather (prototype)
 
-- **All Plans:** views all saved plans together, displaying workout source and overlapping days. Individual plans remain separate; **the app does not coordinate their training loads**.
-- **Run logging:** optional actual average pace (mm:ss/mile) and average heart rate (bpm), saved per session. They appear in Progress and as context in rule-based training reviews.
-- **Runner Profile:** optional age, weight in pounds, maximum HR, and resting HR. Example 5-zone estimates; measured max HR is preferred, age formula is only a rough estimate.
-- **Calories:** approximate running energy from completed miles and entered weight: kcal ≈ weight_kg × miles × 1.609344. This is an estimate, not a measured calorimeter or watch readout.
-- Existing Supabase `runner_data` stores a version-2 portfolio JSON object. Runner profile is appended as an optional object, so **no new SQL** is required. Cloud is last-write-wins.
-- Wearable connections are **not implemented**. Apple Health requires an iOS app and HealthKit entitlement; Android Health Connect requires an Android app; Strava can be added later with secure OAuth and a backend. Never store third-party client secrets on GitHub Pages.
-- Actual 'AI' is still a rules engine; recommendations remain runner-approved and are not medical guidance.
+## Before you upload
+1. In your existing app, use **Plan Settings → Download all plans backup**. Keep the backup.
+2. Unzip this ZIP. Upload `index.html`, `sw.js`, `icon.svg`, and `manifest.webmanifest` to the **root** of your existing GitHub repository, replacing matching files. Commit changes.
+3. **Keep your existing `config.js` unchanged.** Do not upload your Supabase secret/service-role key. No additional SQL is required.
+4. Refresh the site in a private window if caching causes a stale version.
 
-## Install
+## New features
+- **Trends & Weather** tab: trends based on completed workouts, pace, average HR, effort and mileage, with a choice of active-plan or all-plans analysis.
+- More cautious cross-plan duplicate handling: only exact same-day logged runs with matching distance, pace **and** HR are deduplicated in the all-plans view. Any others might double-count; check your logs.
+- Optional **Use my location once** browser permission flow, or search a city instead. Coordinates are rounded to ~0.1 degree before weather request, are not saved or synced to Supabase, and are discarded when you close the tab. A weather provider does receive coordinates when you fetch local weather.
+- Current temperature, feels-like temperature, humidity, wind, seven-day high/low temperatures, and rain probability from Open-Meteo.
+- Weather caveats appear in **Review training** if you have recently requested a forecast. Weather does not automatically rewrite workouts.
 
-1. **Download your full backup** in the existing app.
-2. Upload `index.html`, `sw.js`, `manifest.webmanifest`, and `icon.svg` to your GitHub repository root, replacing matching files. Keep your existing configured `config.js`; DO NOT upload a placeholder over it.
-3. No database migration or SQL changes required.
-4. Open the app, use All Plans, try a new workout log with pace and HR, and save Runner Profile.
-5. Check Account > Save to cloud and test restoring both plans and the runner profile after signing in again.
-
-Development prototype only, not production-tested, with no wearable access or generative AI connected. Health metrics should be collected only with clear user consent and strong privacy controls before public release.
+## Important limitations
+- This is **rule-based adaptation**, not a connected generative AI model. Training reviews still focus on the selected active plan rather than a truly combined workload. The all-plans display is analytics, not a consolidated training prescription.
+- Weather is a forecast, not actual conditions from historical runs. Humidity and other measures alone cannot establish physiological risk or calculate individual safe pacing. The model does not diagnose injuries.
+- Browser location permission requires HTTPS and an explicit click. Access can be denied. This version does not track runs via GPS or connect to Apple Health, Health Connect, Garmin or Strava.
+- Open-Meteo's free API is for **non-commercial prototypes**; subscriptions or advertising would require commercial licensing, alternative licensed providers, and attribution compliance. See https://open-meteo.com/en/terms and https://open-meteo.com/en/docs.
+- Need to independently test browser behavior, authentication, persistence and API availability before treating as production-ready.
