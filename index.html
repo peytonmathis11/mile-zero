@@ -293,7 +293,27 @@ function save(){storePortfolio(true)}
 function load(){try{let v=JSON.parse(localStorage.getItem(portfolioKey()));if(validPortfolio(v)){portfolio=v;setActive();return !!data}}catch(e){}try{let old=JSON.parse(localStorage.getItem(activeStorageKey()));if(validPlan(old)){portfolio=normalizePortfolio(old);setActive();storePortfolio(false);return true}}catch(e){}portfolio=normalizePortfolio(null);data=null;return false}
 function createPlan(){if(data){if(!confirm('Create another plan? Your current plan will stay saved.'))return}portfolio.activeId=null;data=null;setProfile(baseProfile());navigate('settings');toast('Choose your goal and generate a new plan. Existing plans are safe.')}
 function switchPlan(id){let e=portfolio.plans.find(p=>p.id===id);if(!e)return;storePortfolio();portfolio.activeId=id;setActive();storePortfolio();navigate('home');toast('Switched to '+e.name)}
-function renamePlan(id){let e=portfolio.plans.find(p=>p.id===id);if(!e)return;let name=prompt('Plan name:',e.name);if(name===null)return;name=name.trim().slice(0,80);if(!name){toast('A plan needs a name.');return}e.name=name;e.customName=(name!==e.plan.profile.goal+' training');save();render()}
+function function saveCustomPlanName() {
+  const entry = currentEntry();
+
+  if (!entry) {
+    toast("Generate your plan first to save its name.");
+    return;
+  }
+
+  const customName =
+    $('customPlanName').value.trim().slice(0, 80);
+
+  entry.name = customName ||
+    entry.plan.profile.goal + ' training';
+
+  entry.customName = Boolean(customName);
+
+  save();
+  render();
+
+  toast("Plan name updated!");
+}renamePlan(id){let e=portfolio.plans.find(p=>p.id===id);if(!e)return;let name=prompt('Plan name:',e.name);if(name===null)return;name=name.trim().slice(0,80);if(!name){toast('A plan needs a name.');return}e.name=name;e.customName=(name!==e.plan.profile.goal+' training');save();render()}
 function deletePlan(id){let e=portfolio.plans.find(p=>p.id===id);if(!e||!confirm('Delete "'+e.name+'" and all of its workout logs? Download a backup first. This cannot be undone after syncing.'))return;portfolio.plans=portfolio.plans.filter(p=>p.id!==id);if(portfolio.activeId===id)portfolio.activeId=portfolio.plans[0]?.id||null;setActive();save();navigate('plans');toast('Plan deleted.')}
 function renderPlans(){
 // Repair earlier stale distance-based names without regenerating workouts.
