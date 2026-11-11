@@ -48,6 +48,17 @@ body{background:linear-gradient(180deg,#E6E2D8 0%,#F0EEE8 55%,#E5E0D5 100%);colo
 
 .trend-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:10px}.trend-item{background:#F0EFE8;border:1px solid #D2D3C8;padding:13px;border-radius:12px}.trend-item strong{display:block;font-size:22px;color:#20372B}.trend-track{background:#D7DBD1;border-radius:30px;height:10px;overflow:hidden;margin:7px 0}.trend-track>div{height:100%;background:#4E7058;border-radius:30px}.weather-days{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:9px;margin-top:12px}.weather-day{border:1px solid #D2D8CB;border-radius:12px;padding:11px;background:#FCFBF7}.weather-day strong{display:block;margin-bottom:5px}
 .integration-why{margin-top:10px;border-top:1px solid #D4D8CF;padding-top:8px}.integration-why summary{font-size:12px;color:#315F42;font-weight:800;cursor:pointer}.integration-compare{margin-top:8px;background:#F0F2EB;border:1px solid #D8DCCE;border-radius:10px;padding:10px}.integration-compare-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;font-size:11px;padding:5px 0}.integration-compare-row span{text-align:right}.integration-final{border-top:1px solid #BECABB;padding-top:9px;color:#254B34}
+
+/* Full-width, readable integrated-plan comparison dialog */
+.comparison-modal{width:min(94vw,780px);max-height:90vh;overflow-y:auto}
+.compare-modal-body{overflow-wrap:anywhere}
+.compare-modal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:16px 0}
+.compare-detail-card{background:#F4F4ED;border:1px solid #D5D8CF;border-radius:13px;padding:17px;min-width:0}
+.compare-detail-card h3{margin:8px 0 7px;overflow-wrap:anywhere}
+.compare-big{font-weight:850;color:#20372B}
+.compare-result{background:#EAF0E5;border-color:#B9CDB4;margin-bottom:17px}
+.compare-open{display:block;width:100%;margin-top:10px;padding:9px 8px;background:#E6EEE3;border:1px solid #C5D4C2;border-radius:8px;color:#254A34;font-weight:800;font-size:11px;text-align:center;white-space:normal;overflow-wrap:anywhere}
+@media(max-width:580px){.compare-modal-grid{grid-template-columns:1fr}.comparison-modal{width:min(96vw,780px);padding:17px}}
 </style></head><body>
 <div class="app"><header class="top"><div class="brand">MILE <em>Ø</em></div><div class="topright">EARN YOUR DISTANCE.</div></header>
 <nav class="nav" aria-label="Main navigation"><button data-tab="home" class="active">Dashboard</button><button data-tab="plans">My Plans</button><button data-tab="plan">Calendar</button><button data-tab="progress">Progress</button><button data-tab="runner">Profile</button></nav>
@@ -486,70 +497,106 @@ function raceRecoveryDays(entry){
  return ['50K','50 Mile','100K','100 Mile','6 Hour','12 Hour','24 Hour'].includes(goal)?7:
   ['Marathon','Half Marathon'].includes(goal)?4:2;
 }
+// Evidence-informed dual-goal draft: one load budget, not the sum of two plans.
+// These are conservative coaching heuristics, not a validated personalized prescription.
+function integrationHard(type){return /tempo|threshold|interval|speed|hill|marathon-specific|race-pace/i.test(type||'');}
+function integrationWeeklySourceMileage(entry,date){
+ const start=parseLocalDate(entry.plan.profile.startDate),at=parseLocalDate(date);
+ if(!start||!at)return 0;
+ const daysApart=Math.round((Date.UTC(at.getFullYear(),at.getMonth(),at.getDate())-Date.UTC(start.getFullYear(),start.getMonth(),start.getDate()))/86400000);
+ const i=Math.floor(daysApart/7);
+ return i>=0&&i<entry.plan.weeks.length?sum(entry.plan.weeks[i].sessions.map(s=>s.miles)):0;
+}
 function buildIntegrationProposal(){
  const sources=integrationSources();if(sources.length!==2)return null;
  const start=monday();
  const lastRace=sources.map(e=>parseLocalDate(e.plan.profile.raceDate)).filter(Boolean).sort((a,b)=>b-a)[0];
  if(!lastRace||lastRace<parseLocalDate(start))return {error:'Both active race dates are in the past. Update the goals first.'};
  const weeks=raceWeekCount(start,isoDate(lastRace));
- if(weeks<1||weeks>52)return {error:'The integrated prototype supports race dates within the next 52 weeks.'};
+ if(weeks<1||weeks>52)return {error:'Only future race dates within the next 52 weeks are supported.'};
  const notes=[
-  'One session per calendar day. Weekly mileage is not the sum of your two source plans.',
-  'The nearer upcoming race sets the primary training emphasis. Existing rest days remain rest days.',
-  'Where both plans schedule running, the selected session does not add the other plan mileage.',
-  'Race days and a conservative immediate recovery period are protected; training may need a longer individualized recovery.',
-  'This is a rules-based planning draft, not AI coaching or a validated training prescription.',
-  'Weather is deliberately excluded from future-date workout prescriptions: forecasts beyond a few days are not reliable. Saved city is used for current condition reviews only.'
+  'This is a rules-based, evidence-informed draft, not AI coaching or an individually validated training prescription.',
+  'Training volume comes from one weekly load budget, never the sum of both plans.',
+  'Race weeks and post-race recovery have priority. The athlete should review time between races.',
+  'A single hard session per week is used as a cautious default; individual needs vary.'
  ];
- let conflicts=0,races=[];
- const out=[];
+ let conflicts=0;const races=[],out=[];
+ const startingMiles=sources.map(e=>Math.max(0,Number(e.plan.profile.mileage)||0)).filter(n=>n>0);
+ let lastLoad=startingMiles.length?Math.max(...startingMiles):0;
  for(let wi=0;wi<weeks;wi++){
-  const sessions=[];
+  const mondayDate=isoDate(dateAt(start,wi,0));
+  const upcoming=sources.filter(e=>raceDistanceDays(e,mondayDate)>=0)
+   .sort((a,b)=>raceDistanceDays(a,mondayDate)-raceDistanceDays(b,mondayDate));
+  const focus=upcoming[0]||null;
+  const weekDates=days.map((_,di)=>isoDate(dateAt(start,wi,di)));
+  const anyRaceWeek=sources.some(e=>weekDates.some(d=>raceDistanceDays(e,d)===0));
+  const recoveryWeek=weekDates.some(d=>sources.some(e=>{const since=-raceDistanceDays(e,d);return since>0&&since<=raceRecoveryDays(e)}));
+  const goalWeek=focus?integrationWeeklySourceMileage(focus,mondayDate):0;
+  const alternate=upcoming[1]?integrationWeeklySourceMileage(upcoming[1],mondayDate):0;
+  // Use the closer goal's workload; never add two planned weekly totals.
+  let target=goalWeek||alternate||lastLoad;
+  if(wi===0&&lastLoad>0)target=Math.min(target,lastLoad*1.08);
+  if(wi>0&&lastLoad>0)target=Math.min(target,lastLoad*1.08);
+  // Preserve volume reductions in the source race week / recovery schedule.
+  if(anyRaceWeek)target=Math.min(target,goalWeek||target);
+  if(recoveryWeek)target=Math.min(target,Math.max(0,lastLoad*.65));
+  target=halfMiles(target);
+  const selected=[];let hardUsed=false;
   for(let di=0;di<7;di++){
-   const dt=dateAt(start,wi,di),date=isoDate(dt);
-   const available=sources.map(entry=>({entry,s:sourceSessionForDate(entry,date),until:raceDistanceDays(entry,date)})).filter(x=>x.s);
+   const date=weekDates[di];
+   const rows=sources.map(entry=>({entry,s:sourceSessionForDate(entry,date),until:raceDistanceDays(entry,date)})).filter(x=>x.s);
    const events=sources.filter(entry=>raceDistanceDays(entry,date)===0);
-   if(events.length>1)conflicts++;
-   let chosen=null,why='';
+   const recovering=sources.filter(entry=>{const since=-raceDistanceDays(entry,date);return since>0&&since<=raceRecoveryDays(entry)});
+   let chosen=null,reason='';
    if(events.length){
-    chosen={entry:events[0],s:available.find(x=>x.entry.id===events[0].id)?.s||null};
-    why=events.length>1?'Two races on the same date: cannot race both; review manually.':'Protected event day; do not stack another workout.';
+    chosen=rows.find(x=>x.entry.id===events[0].id)||null;
+    reason=events.length>1?'Two races on the same date. This schedule needs a manual decision.':'Race day takes priority over training.';
     races.push({date,goal:events.map(e=>e.plan.profile.goal).join(' + ')});
-   }else{
-    const recovery=sources.filter(entry=>{const since=-raceDistanceDays(entry,date);return since>0&&since<=raceRecoveryDays(entry);});
-    if(recovery.length){why='Post-event recovery: no scheduled run until you review recovery needs.';}
-    else if(available.length){
-     // The nearest future goal takes precedence. If the other race has passed, its schedule is not used.
-     const future=available.filter(x=>x.until>=0).sort((a,b)=>a.until-b.until);
-     chosen=future[0]||null;
-     if(!chosen){why='All scheduled event goals have passed.';}
-     else if(available.length>1&&available.filter(x=>x.s.miles>0).length>1){
-      conflicts++;why='Two workouts were planned. Only one was retained; check intensity and recovery.';
-     }else why=chosen.s.type==='Rest / mobility'?'Primary goal rest day protected.':'Selected from the nearer active race goal.';
-    }
+    if(events.length>1)conflicts++;
+   }else if(recovering.length){reason='Recovery after a race takes priority over the other plan. Timing is provisional.';}
+   else {
+    const eligible=rows.filter(x=>x.until>=0).sort((a,b)=>a.until-b.until);
+    const primary=eligible[0];
+    if(primary){
+     chosen=primary;
+     if(rows.filter(x=>x.s.miles>0).length>1){conflicts++;reason='Both plans scheduled training. Used the nearer race as the priority, within one weekly mileage budget.';}
+     else reason='Selected the session aligned with the nearer upcoming race.';
+     if(chosen.s.miles<=0)reason='Rest day retained from the priority race plan.';
+    }else reason='No active workout planned for this date.';
    }
-   const base=chosen?.s;
-   const isRace=events.length>0;
-   const s=base?clone(base):{id:`${wi}-${di}`,day:days[di],type:'Rest / mobility',miles:0,pace:'',details:why,
-    status:'planned',actual:null,rpe:null,fatigue:null,pain:false,notes:'',manual:false};
-   Object.assign(s,{id:`${wi}-${di}`,day:days[di],status:'planned',actual:null,actualPace:'',averageHr:null,
-    rpe:null,fatigue:null,pain:false,notes:'',manual:false,integratedReason:why,
-    sourcePlanId:chosen?.entry?.id||null,sourceName:chosen?.entry?.name||'Recovery'});
-   if(isRace){s.type='RACE DAY';s.miles=0;s.pace='';s.details=why+' Event: '+events.map(e=>e.name).join(' / ');}
-   if(!chosen&&!isRace){s.type='Rest / mobility';s.miles=0;s.pace='';s.details=why||'No additional workout scheduled.';}
-   sessions.push(s);
+   const racing=events.length>0,base=chosen?.s;
+   let s=base?clone(base):{id:`${wi}-${di}`,day:days[di],type:'Rest / mobility',miles:0,pace:'',details:reason,status:'planned'};
+   Object.assign(s,{id:`${wi}-${di}`,day:days[di],status:'planned',actual:null,actualPace:'',averageHr:null,rpe:null,fatigue:null,pain:false,notes:'',manual:false,integratedReason:reason,sourcePlanId:chosen?.entry?.id||null,sourceName:chosen?.entry?.name||'Recovery',integratedOriginalMiles:Number(s.miles)||0});
+   if(racing){s.type='RACE DAY';s.miles=0;s.pace='';s.details=reason+' Event: '+events.map(e=>e.name).join(' / ');}
+   else if(!chosen){s.type='Rest / mobility';s.miles=0;s.pace='';s.details=reason;}
+   else if(integrationHard(s.type)){
+    if(hardUsed){s.type='Easy run';s.details='Converted an additional hard session to easy aerobic running to avoid stacking intensity.';s.integratedReason='Only one hard workout retained this week; duplicate hard sessions need individual review.';}
+    else hardUsed=true;
+   }
+   selected.push(s);
   }
-  out.push({phase:'Coordinated draft',sessions,note:'Rule-based combination. Check weekly load and race-specific readiness.'});
+  // Consolidate workload: first keep chosen training days, then scale to one weekly budget.
+  const runIndices=selected.map((s,i)=>s.miles>0&&s.type!=='RACE DAY'?i:-1).filter(i=>i>=0);
+  const sourceTotal=sum(runIndices.map(i=>selected[i].miles));
+  if(sourceTotal>0){
+   const allowed=Math.min(target,sourceTotal); // never inflate a workout to fill a quota
+   const weights=runIndices.map(i=>selected[i].miles);
+   const allocation=distributeHalfMiles(allowed,runIndices,weights);
+   for(const i of runIndices){
+    const s=selected[i],before=s.miles;s.miles=allocation[i]||0;
+    if(s.miles<before)s.integratedReason+=' Adjusted '+before+' to '+s.miles+' miles to limit total training load.';
+    if(s.miles===0){s.type='Rest / mobility';s.pace='';}
+   }
+  }
+  const scheduled=sum(selected.map(s=>s.miles));
+  // Keep the next-week progression anchored to actual scheduled load, not the two-plan sum.
+  lastLoad=scheduled>0?scheduled:Math.max(0,lastLoad*.65);
+  out.push({phase:anyRaceWeek?'Race week':recoveryWeek?'Post-race recovery':'Coordinated build',sessions:selected,note:'One shared weekly load budget; review intensity, long runs, recovery and race priorities.'});
  }
- // Large week-to-week spikes may result from two independent source schedules. Flag, do not hide them.
- for(let wi=1;wi<out.length;wi++){
-  const prev=sum(out[wi-1].sessions.map(s=>s.miles)),now=sum(out[wi].sessions.map(s=>s.miles));
-  if(prev>=5&&now>prev*1.15+1)notes.push(`Week ${wi+1} increases scheduled volume from ${prev} to ${now} miles. Review this jump; the coordinator has not proven it appropriate.`);
- }
- return {approved:false,signature:integrationSignature(),sourceIds:sources.map(e=>e.id),
-  sourceNames:sources.map(e=>e.name),createdAt:new Date().toISOString(),conflicts,races,notes,
-  plan:{profile:{...clone(sources[0].plan.profile),goal:'Integrated race goals',startDate:start,
-   raceDate:isoDate(lastRace),weeks},weeks:out,created:new Date().toISOString(),assessment:{issues:notes,notes:[]},adjustmentHistory:[],engineVersion:'integrated-rules-v1'}};
+ const shortGap=sources.map(e=>parseLocalDate(e.plan.profile.raceDate)).filter(Boolean).sort((a,b)=>a-b);
+ if(shortGap.length===2&&Math.round((shortGap[1]-shortGap[0])/86400000)<14)notes.push('The two events are less than 14 days apart; recovery and race priority need individualized review.');
+ return {approved:false,signature:integrationSignature(),sourceIds:sources.map(e=>e.id),sourceNames:sources.map(e=>e.name),createdAt:new Date().toISOString(),conflicts,races,notes,
+  plan:{profile:{...clone(sources[0].plan.profile),goal:'Integrated race goals',startDate:start,raceDate:isoDate(lastRace),weeks},weeks:out,created:new Date().toISOString(),assessment:{issues:notes,notes:[]},adjustmentHistory:[],engineVersion:'integrated-evidence-informed-rules-v2'}};
 }
 function prepareIntegration(){
  if(!requireAccount())return;
@@ -592,15 +639,21 @@ function setCalendarMode(mode){
  portfolio.calendarMode=mode==='integrated'?'integrated':'separate';
  save();render();
 }
-function integrationComparison(x,wi,di,sess){
+function showIntegrationComparison(wi,di){
+ const x=integrationDraft||portfolio.integratedPlan;
+ if(!x?.plan?.weeks?.[wi]?.sessions?.[di])return;
+ const sess=x.plan.weeks[wi].sessions[di];
  const when=isoDate(dateAt(x.plan.profile.startDate,wi,di));
- const active=x.sourceIds.map(id=>portfolio.plans.find(p=>p.id===id)).filter(Boolean);
- const original=active.map(entry=>{
+ const originals=x.sourceIds.map(id=>portfolio.plans.find(p=>p.id===id)).filter(Boolean);
+ const originalCards=originals.map(entry=>{
   const s=sourceSessionForDate(entry,when);
-  return `<div class="integration-compare-row"><strong>${esc(entry.name)}</strong><span>${s?esc(s.type)+' · '+s.miles+' mi':'No workout scheduled'}</span></div>`;
+  return `<div class="compare-detail-card"><div class="eyebrow">ORIGINAL GOAL</div><h3>${esc(entry.name)}</h3><p class="compare-big">${s?esc(s.type):'No workout planned'} · ${s?Number(s.miles)||0:0} mi</p><p class="subtle">${s?esc(s.details||''):'No scheduled workout in this plan on this day.'}</p></div>`;
  }).join('');
- const proposed=`<div class="integration-compare-row integration-final"><strong>Combined workout</strong><span>${esc(sess.type)} · ${sess.miles} mi</span></div>`;
- return `<details class="integration-why"><summary>See how this was combined</summary><div class="integration-compare">${original}${proposed}<p class="subtle" style="margin:9px 0 0">${esc(sess.integratedReason||'One scheduled session, not the sum of both plans.')}</p></div></details>`;
+ modal(`<div class="compare-modal-body"><div class="eyebrow">MILE Ø / WORKOUT COMPARISON</div><h2>${esc(days[di])}, ${esc(dateLabel(parseLocalDate(when)))}</h2><p class="subtle">See the two original plans and the one proposed session. No original workouts are changed.</p><div class="compare-modal-grid">${originalCards}</div><div class="compare-detail-card compare-result"><div class="eyebrow">PROPOSED INTEGRATED WORKOUT</div><h3>${esc(sess.type)} · ${Number(sess.miles)||0} mi</h3><p>${esc(sess.details||'')}</p></div><h3>Why this workout?</h3><p class="subtle">${esc(sess.integratedReason||'One session was selected without adding the two plan distances together.')}</p><p class="subtle">The coordinator uses one weekly workload budget, priorities by upcoming race date, rest days and post-race recovery. It cannot determine individual injury risk or confirm that this combination is optimal.</p><div class="actions"><button class="btn dark" type="button" onclick="closeModal()">Close comparison</button></div></div>`);
+ const el=$('backdrop')?.querySelector('.modal');if(el)el.classList.add('comparison-modal');
+}
+function integrationComparison(x,wi,di,sess){
+ return `<button type="button" class="compare-open" onclick="showIntegrationComparison(${wi},${di})">How was this combined?</button>`;
 }
 function renderCalendarModeSelector(){
  const root=$('calendarModeSelector');if(!root)return;
@@ -624,7 +677,7 @@ function renderIntegration(){
  const wi=clamp(integrationWeek,0,x.plan.weeks.length-1);integrationWeek=wi;
  const w=x.plan.weeks[wi],dt=dateAt(x.plan.profile.startDate,wi,0);
  const planned=sum(w.sessions.map(s=>s.miles)),done=sum(w.sessions.filter(s=>s.status==='done').map(s=>s.actual??s.miles));
- root.innerHTML=`<div class="panel" style="border-left:5px solid #52785C;margin-bottom:16px"><div class="eyebrow">MILE Ø / MULTI-RACE COORDINATION</div><h2 style="margin:8px 0">${approved?'Your integrated training calendar':'Your combined training preview'}</h2><p class="subtle">${x.sourceNames.map(esc).join(' + ')} · ${x.plan.weeks.length} weeks · One workout per day · ${x.conflicts} overlapping session/race dates flagged</p><div class="note ${approved&&!current?'warn':''}">${approved?(valid?'<strong>Approved plan:</strong> Log and edit workouts here. Do not duplicate these runs in individual plans.':'<strong>Needs review:</strong> The original plans changed. Your previous integrated workouts and logs are preserved, but logging is paused until you build and approve a new schedule.'):'<strong>Preview:</strong> Review the workouts below before choosing this schedule. Your separate plans stay unchanged. This version uses planning rules, not live AI.'}</div>
+ root.innerHTML=`<div class="panel" style="border-left:5px solid #52785C;margin-bottom:16px"><div class="eyebrow">MILE Ø / MULTI-RACE COORDINATION</div><h2 style="margin:8px 0">${approved?'Your integrated training calendar':'Your combined training preview'}</h2><p class="subtle">${x.sourceNames.map(esc).join(' + ')} · ${x.plan.weeks.length} weeks · One workout per day · ${x.conflicts} overlapping session/race dates flagged</p><div class="note ${approved&&!current?'warn':''}">${approved?(valid?'<strong>Approved plan:</strong> Log and edit workouts here. Do not duplicate these runs in individual plans.':'<strong>Needs review:</strong> The original plans changed. Your previous integrated workouts and logs are preserved, but logging is paused until you build and approve a new schedule.'):'<strong>Preview:</strong> Review the workouts below before choosing this schedule. Your separate plans stay unchanged. This version uses evidence-informed planning rules, not live AI. It is a draft requiring your review.'}</div>
  <div class="actions" style="margin-top:12px">${!approved?`<button class="btn dark" onclick="approveIntegration()">Approve & use this schedule</button><button class="btn light" onclick="discardIntegrationDraft()">Discard proposal</button>`:`<button class="btn light" onclick="prepareIntegration()">Rebuild proposal</button>`}<button class="btn light" onclick="navigate('plans')">My Plans</button></div>
 
  <p class="subtle">${runnerProfile().trainingCity?`Weather context city: ${esc(runnerProfile().trainingCity)} (current-condition reviews only; this schedule is not yet AI-adjusted).`:'Save a training city in Profile to enable current-weather context in feedback.'}</p><div class="section-title"><h3>Week ${wi+1} · ${esc(dateLabel(dt))}</h3><div class="weekcontrols"><button class="btn light sm" onclick="integrationMove(-1)" ${wi===0?'disabled':''}>← Previous</button><button class="btn light sm" onclick="integrationMove(1)" ${wi===x.plan.weeks.length-1?'disabled':''}>Next →</button></div></div><div class="cards"><div class="card"><div class="muted">THIS WEEK · PLANNED</div><div class="metric">${planned} mi</div></div><div class="card"><div class="muted">LOGGED</div><div class="metric">${done} mi</div></div><div class="card"><div class="muted">ACTIVE GOALS</div><div class="metric">2</div></div></div>
