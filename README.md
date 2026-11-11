@@ -1,19 +1,19 @@
-# MILE Ø v0.6 — Multiple training plans (beta)
+# MILE Ø v0.7 — Shared calendar & runner metrics (beta)
 
-- Save, switch, rename and delete multiple independent plans via **My Plans**.
-- Each plan retains its own workout logs, paces, calendar, and adjustment history.
-- Existing v0.5 single-plan local or cloud data is migrated to a one-plan portfolio.
-- New cloud portfolios are stored in the **existing** Supabase `runner_data.payload` JSONB field. **No new SQL is needed.**
-- The app still uses rules-based training suggestions, not generative AI.
-- Simultaneous plans DO NOT coordinate training load. Do not stack two programs; select one active calendar.
-- Backups now contain *all* plans. Old single-plan backup imports are supported.
-- Basic cloud sync is last-write-wins. Avoid using two devices simultaneously.
+- **All Plans:** views all saved plans together, displaying workout source and overlapping days. Individual plans remain separate; **the app does not coordinate their training loads**.
+- **Run logging:** optional actual average pace (mm:ss/mile) and average heart rate (bpm), saved per session. They appear in Progress and as context in rule-based training reviews.
+- **Runner Profile:** optional age, weight in pounds, maximum HR, and resting HR. Example 5-zone estimates; measured max HR is preferred, age formula is only a rough estimate.
+- **Calories:** approximate running energy from completed miles and entered weight: kcal ≈ weight_kg × miles × 1.609344. This is an estimate, not a measured calorimeter or watch readout.
+- Existing Supabase `runner_data` stores a version-2 portfolio JSON object. Runner profile is appended as an optional object, so **no new SQL** is required. Cloud is last-write-wins.
+- Wearable connections are **not implemented**. Apple Health requires an iOS app and HealthKit entitlement; Android Health Connect requires an Android app; Strava can be added later with secure OAuth and a backend. Never store third-party client secrets on GitHub Pages.
+- Actual 'AI' is still a rules engine; recommendations remain runner-approved and are not medical guidance.
 
-## Before update
-1. In v0.5, download a full backup of your current plan and keep it safe.
-2. Unzip, upload `index.html`, `sw.js`, `manifest.webmanifest`, and `icon.svg` to the repository root. **Keep your existing configured `config.js` unchanged** (never replace it with a blank template).
-3. No database setup or SQL rerun required.
-4. Reload the app. Under My Plans, your existing plan should appear. Test a second plan and switching between them.
-5. Check Account -> Save to cloud, then sign out and in to verify both plans appear.
+## Install
 
-This is a development prototype, not independently verified for production use. Test account sync before relying on it with important data. GitHub Pages should not host a paid subscription business.
+1. **Download your full backup** in the existing app.
+2. Upload `index.html`, `sw.js`, `manifest.webmanifest`, and `icon.svg` to your GitHub repository root, replacing matching files. Keep your existing configured `config.js`; DO NOT upload a placeholder over it.
+3. No database migration or SQL changes required.
+4. Open the app, use All Plans, try a new workout log with pace and HR, and save Runner Profile.
+5. Check Account > Save to cloud and test restoring both plans and the runner profile after signing in again.
+
+Development prototype only, not production-tested, with no wearable access or generative AI connected. Health metrics should be collected only with clear user consent and strong privacy controls before public release.
