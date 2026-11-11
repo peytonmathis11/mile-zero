@@ -1,16 +1,9 @@
-# MILE Ø v1.0 — Progressive Endurance Draft Engine
+# MILE Ø v1.1 — Race-Date Scheduling
 
-### What changed
-- Current comfortable weekly mileage now sets the **starting point**, not a fixed multiplier ceiling.
-- Each build week progresses from the previous **build** benchmark, not the reduced recovery week.
-- Every fourth pre-taper week is intentionally easier; event-dependent taper is retained.
-- Minimum one complete rest/mobility day each week, even when seven days are selected.
-- Scheduled run distances and weekly totals use **0.5-mile increments**. Manually logged actual mileage can still be more precise.
-- 50-mile/ultra plans flag very low planned peak volumes for review rather than claiming readiness.
-- All existing accounts, multi-plan storage, trends, weather context and runner-approved adaptation remain.
+New: choose **race date** and a Monday training start date. The app calculates weeks (4–52) and generates a calendar ending in the **race week**, with a race-day event on the correct weekday. The event is intentionally excluded from pre-race training mileage but can be logged afterward. Race countdown appears on the dashboard and calendar. The existing progressive training, accounts, and workout tracking remain.
 
-### Installation
-Back up your data first. Upload `index.html`, `sw.js`, `manifest.webmanifest`, `icon.svg` to the root of the existing GitHub Pages repository. **Keep your configured `config.js`**. No new SQL. Create a **new plan** to test the engine; existing plans remain unchanged.
+## Install
+Before replacing files, export your **full backup**. Upload `index.html`, `sw.js`, `manifest.webmanifest`, and `icon.svg` in the root of your existing GitHub repo, and commit. **Keep your configured `config.js`** and your Supabase settings. Make a new plan to test race-date functionality; saved plans are not automatically changed.
 
-### Limitations
-This is an experimental rules-based training planner, not a validated or medically reviewed coach. Longer plans may permit higher progression, but cannot establish injury safety or race readiness. Plans should be reviewed by a qualified coach before reliance on them for difficult events. Changes in mileage do not guarantee performance improvements.
+## Notes
+Changing the race date of an existing plan and clicking Generate will **replace that plan's scheduled workouts and logged runs** after a confirmation. Back up first. This prototype uses rules-based training heuristics; weeks are calendar weeks (Monday–Sunday), including a potentially partial opening week and the race week. It does not verify race readiness or automatically realign multiple plans.
