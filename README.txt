@@ -1,16 +1,6 @@
-MILE Ø — WIDE COMPARISON POPUP + EVIDENCE-INFORMED INTEGRATION
+MILE Ø Training Engine v2.1
+Upload index.html, training-engine.js, and sw.js to GitHub repository root. Preserve config.js and Supabase. Backup your existing index.html and plan-data JSON first.
 
-Changes:
-- Every integrated day uses a 'How was this combined?' button that opens a wide modal with source workouts, proposed workout, and rationale.
-- Small-screen dialog uses stacked full-width cards.
-- Integrated training draft uses one weekly budget (never sums two plans), prioritizes nearer race, respects race/post-race recovery days, reduces duplicate intense sessions, and limits aggressive week-to-week increases.
-- No live OpenAI integration yet. These are generalized coaching heuristics, not a personalized or medically validated training plan. The runner must still review the proposed plan before approval.
-
-INSTALL:
-1. Export a training backup from the currently working website and save a copy of the existing index.html.
-2. Replace only index.html and sw.js in GitHub main/root. Leave config.js unchanged.
-3. Commit, load site in a private window to check new version.
-4. Test with two SAMPLE active race plans, build a new integrated draft, open comparison popups on desktop and phone.
-5. Do not overwrite an approved integrated plan with logged workouts without exporting a backup first.
-
-IMPORTANT: A previously approved integrated plan will not retroactively gain the new training logic. Build and approve a NEW integrated proposal to use the updated rules. This will prompt if previous integrated logs exist.
+Rules-based, research-informed research prototype, not validated AI coaching.
+Logs are used only from the two active plans or previously approved integrated runs. Age and weight are never used as blanket mileage penalties. Other plan source code and database configuration unchanged.
+Test: create two active goals, log runs with HR/RPE/fatigue, preview integrated schedule, inspect comparisons and change in target, approve only after review.

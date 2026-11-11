@@ -1,0 +1,145 @@
+/* MILE Ø training engine v2.1 — deterministic, explainable research-informed prototype.
+   Not an AI language model, not scientifically/clinically validated, and not medical advice.
+   No personal data leaves the browser through this module. */
+(function(global){
+'use strict';
+const roundHalf=x=>Math.max(0,Math.round((Number(x)||0)*2)/2);
+const cap=(x,lo,hi)=>Math.max(lo,Math.min(hi,x));
+const sum=a=>a.reduce((v,x)=>v+(Number(x)||0),0);
+const date=s=>{const d=new Date(String(s||'')+'T12:00:00');return Number.isFinite(d.getTime())?d:null};
+const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const addDays=(s,n)=>{const d=date(s);d.setDate(d.getDate()+n);return iso(d)};
+const daysBetween=(a,b)=>Math.round((date(b)-date(a))/86400000);
+const monday=(d=new Date())=>{const x=new Date(d.getFullYear(),d.getMonth(),d.getDate(),12);x.setDate(x.getDate()-(x.getDay()+6)%7);return iso(x)};
+const weekCount=(a,b)=>Math.floor(daysBetween(a,b)/7)+1;
+const hard=s=>/tempo|threshold|interval|speed|hill|marathon-specific|race-pace/i.test(s?.type||'');
+const long=s=>/long run|back-to-back/i.test(s?.type||'');
+const raceDays=(goal)=>['50K','50 Mile','100K','100 Mile','6 Hour','12 Hour','24 Hour'].includes(goal)?7:['Marathon','Half Marathon'].includes(goal)?4:2;
+const sourceAt=(e,dt)=>{let n=daysBetween(e.plan.profile.startDate,dt);return n>=0?e.plan.weeks[Math.floor(n/7)]?.sessions[n%7]||null:null};
+const untilRace=(e,dt)=>daysBetween(dt,e.plan.profile.raceDate);
+const sourceWeekly=(e,dt)=>{let n=daysBetween(e.plan.profile.startDate,dt),w=e.plan.weeks[Math.floor(n/7)];return n>=0&&w?sum(w.sessions.map(s=>s.miles)):0};
+const parsePace=v=>{let m=/^(\d{1,2}):([0-5]\d)$/.exec(String(v||''));return m?(+m[1]+ +m[2]/60):null};
+function distribute(total,positions,weights){let units=Math.round(roundHalf(total)*2);if(!positions.length)return {};let sw=sum(weights), raw=weights.map(w=>sw>0?units*w/sw:units/weights.length);let pieces=raw.map(Math.floor),left=units-sum(pieces);let rank=raw.map((n,i)=>({i,rem:n-pieces[i]})).sort((a,b)=>b.rem-a.rem);for(let j=0;j<left;j++)pieces[rank[j%rank.length].i]++;return Object.fromEntries(positions.map((pos,i)=>[pos,pieces[i]/2]));}
+function analyze(history,profile,now){
+ const recent=(history||[]).filter(r=>r.status==='done'&&r.date&&r.date<=now&&daysBetween(r.date,now)>=0&&daysBetween(r.date,now)<=28);
+ const weekly=[0,1,2,3].map(i=>recent.filter(r=>{const age=daysBetween(r.date,now);return age>=7*i&&age<7*(i+1)}));
+ const miles=weekly.map(w=>sum(w.map(r=>r.miles)));
+ const times=weekly.map(w=>sum(w.map(r=>{const p=parsePace(r.pace);return p?p*(Number(r.miles)||0):0})))
+ const validWeeks=miles.filter(n=>n>0),avg=validWeeks.length?sum(validWeeks)/validWeeks.length:null;
+ const recent7=weekly[0],last14=weekly[0].concat(weekly[1]);
+ const highFatigue=last14.filter(x=>x.fatigue==='high').length;
+ const pain=last14.some(x=>x.pain);
+ const hardRpe=last14.filter(x=>Number(x.rpe)>=8).length;
+ const maxHr=Number(profile?.maxHr)||null;
+ const elevatedHr=!!maxHr&&last14.some(x=>Number(x.hr)>=maxHr*.9&&Number(x.rpe)>=7);
+ const recentWorkload=last14.map(x=>{let pace=parsePace(x.pace);return pace&&Number(x.rpe)?pace*(Number(x.miles)||0)*Number(x.rpe):0});
+ const flags=[];
+ if(highFatigue>=2)flags.push('Repeated high-fatigue reports in recent runs');
+ if(pain)flags.push('Pain/injury concern reported in the last 14 days');
+ if(hardRpe>=3)flags.push('Several recent runs reported very high effort');
+ if(elevatedHr)flags.push('Some recent runs combined high effort with high heart rate relative to recorded maximum');
+ const strain=pain?'pain':highFatigue>=2||hardRpe>=3||elevatedHr?'elevated':'normal';
+ return {weeklyMiles:miles,avgWeeklyMiles:avg,recentRunCount:recent.length,highFatigue,pain,hardRpe,elevatedHr,strain,flags,hasHeartRate:!!maxHr,recentSessionRpeLoad:Math.round(sum(recentWorkload)),recentDurationMinutes:Math.round(sum(times))};
+}
+function build(input){
+ const {sources=[],runnerProfile={},history=[],signature=''}=input||{};
+ if(sources.length!==2)return {error:'Select exactly two active race goals to create an integrated schedule.'};
+ const start=monday(),sortedRaces=sources.map(s=>date(s.plan.profile.raceDate)).filter(Boolean).sort((a,b)=>a-b);
+ if(sortedRaces.length!==2)return {error:'Both race goals need dates.'};
+ const finalRace=iso(sortedRaces[1]);if(date(finalRace)<date(start))return {error:'Both races are in the past.'};
+ const weeks=weekCount(start,finalRace);if(weeks<1||weeks>52)return {error:'Race dates must fall within the next 52 weeks.'};
+ const evidence=analyze(history,runnerProfile,iso(new Date()));
+ const firstBase=Math.max(0,...sources.map(e=>Number(e.plan.profile.mileage)||0));
+ const base=evidence.avgWeeklyMiles??firstBase;
+ const experienced=sources.some(e=>e.plan.profile.experience==='advanced');
+ const returning=sources.some(e=>e.plan.profile.consistency==='returning'||e.plan.profile.experience==='new');
+ const flags=[...evidence.flags];
+ const notes=['Rules-based, research-informed draft. Not an AI model or scientifically validated individualized coaching.',
+  'Completed training and effort inform the workload when available; race goals never cause summed mileage.',
+  'Age is not used as a mileage penalty; weight is not used to restrict training. Neither predicts an individual safe workload.',
+  'Heart-rate context is included only when a measured maximum is supplied, and is checked alongside reported effort.',
+  'Progression settings are cautious product heuristics, not established injury-prevention thresholds.'];
+ if(evidence.recentRunCount<3)notes.push('Limited recent logged runs: the proposal relies more heavily on self-reported current mileage.');
+ if(evidence.pain)notes.push('Recent pain report: proposed reduced training is NOT injury clearance. Seek individualized medical guidance for persistent or worsening symptoms.');
+ if(daysBetween(iso(sortedRaces[0]),finalRace)<14)notes.push('The races are less than two weeks apart; recovery and race priorities require individual review.');
+ const out=[],races=[], conflicts=[];
+ let lastLoad=base, lastBuild=base;
+ for(let wi=0;wi<weeks;wi++){
+  const wStart=addDays(start,wi*7),dates=Array.from({length:7},(_,d)=>addDays(wStart,d));
+  const upcoming=sources.filter(e=>untilRace(e,wStart)>=0).sort((a,b)=>untilRace(a,wStart)-untilRace(b,wStart));
+  const focus=upcoming[0]||null;
+  const raceWeek=dates.some(d=>sources.some(e=>untilRace(e,d)===0));
+  const recoveryWeek=dates.some(d=>sources.some(e=>untilRace(e,d)<0&&-untilRace(e,d)<=raceDays(e.plan.profile.goal)));
+  const sourceTarget=focus?sourceWeekly(focus,wStart):0;
+  const altTarget=upcoming[1]?sourceWeekly(upcoming[1],wStart):0;
+  // Weekly baseline follows real completed training where available. A recovery week does not reset the next build anchor.
+  const maxGain=returning?.03:experienced?.07:.05; // explicit tuneable heuristics, NOT universal safe rates
+  const fatigueFactor=evidence.strain==='pain'?.65:evidence.strain==='elevated'?.82:1;
+  let target=sourceTarget||altTarget||lastBuild;
+  if(wi===0&&base>0)target=Math.min(target,base*(1+maxGain));
+  if(wi>0&&lastBuild>0)target=Math.min(target,lastBuild*(1+maxGain));
+  if(evidence.strain!=='normal'&&wi<2)target=Math.min(target,base*fatigueFactor);
+  if(raceWeek)target=Math.min(target,sourceTarget||target);
+  if(recoveryWeek)target=Math.min(target,lastLoad*.65);
+  target=roundHalf(target);
+  const slots=[],reasons=[];
+  for(let di=0;di<7;di++){
+   const dt=dates[di],rows=sources.map(entry=>({entry,s:sourceAt(entry,dt),until:untilRace(entry,dt)})).filter(r=>r.s);
+   const events=sources.filter(e=>untilRace(e,dt)===0);
+   const recovering=sources.filter(e=>untilRace(e,dt)<0&&-untilRace(e,dt)<=raceDays(e.plan.profile.goal));
+   let selected=null,reason='';
+   if(events.length){selected=rows.find(r=>r.entry.id===events[0].id)||null;reason=events.length>1?'Two races on the same day—manual decision required.':'Race-day priority: replace planned training with the event.';races.push({date:dt,goal:events.map(e=>e.plan.profile.goal).join(' + ')});}
+   else if(recovering.length){reason='Post-race recovery takes priority over the second plan; individual recovery may take longer.';}
+   else{
+    const options=rows.filter(r=>r.until>=0);
+    if(options.length){options.sort((a,b)=>a.until-b.until);selected=options[0];
+     // Preserve meaningful quality for either goal when not near a race, but never add two workouts.
+     const quality=options.find(r=>hard(r.s)&&r.s.miles>0);
+     if(quality&&options[0].until>8&&evidence.strain==='normal')selected=quality;
+     reason=selected===quality?'Preserved a race-specific quality stimulus without stacking workouts.':'Prioritized the nearer race within a shared weekly workload.';
+     if(options.length===2&&options.every(r=>r.s.miles>0))conflicts.push(dt);
+     if((selected.s.miles||0)<=0)reason='Retained a rest day from the priority plan.';
+    }else reason='No planned run on this date.';
+   }
+   const baseSession=selected?.s;
+   let session=baseSession?JSON.parse(JSON.stringify(baseSession)):{type:'Rest / mobility',miles:0,pace:'',details:reason};
+   Object.assign(session,{id:wi+'-'+di,day:['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][di],status:'planned',actual:null,actualPace:'',averageHr:null,rpe:null,fatigue:null,pain:false,notes:'',manual:false,sourcePlanId:selected?.entry.id||null,sourceName:selected?.entry.name||'Recovery',integratedReason:reason,integratedOriginalMiles:Number(session.miles)||0});
+   if(events.length){session.type='RACE DAY';session.miles=0;session.pace='';session.details=reason+' Event: '+events.map(e=>e.name).join(' / ');}
+   else if(recovering.length){session.type='Rest / mobility';session.miles=0;session.pace='';session.details=reason;}
+   else if(wi<2&&evidence.strain!=='normal'&&hard(session)){
+    session.type='Easy run';session.details='Temporarily substituted easy effort after recent strain signals; runner should review symptoms.';
+    session.integratedReason+=' Recent fatigue/pain/effort history favors reducing intensity.';
+   }
+   slots.push(session);
+  }
+  // Avoid intensity stacking and consecutive hard days.
+  let hardUsed=0,prevHard=false;
+  for(const s of slots){if(s.type==='RACE DAY'){prevHard=true;continue;}
+   if(hard(s)){
+    if(hardUsed>=1||prevHard){s.type='Easy run';s.details='Easy aerobic effort instead of an additional hard day.';s.integratedReason+=' Avoided stacked or consecutive quality sessions.';}
+    else hardUsed++;
+   }
+   prevHard=hard(s);
+  }
+  const running=slots.map((s,i)=>s.miles>0&&s.type!=='RACE DAY'?i:-1).filter(i=>i>=0);
+  const requested=sum(running.map(i=>slots[i].miles));
+  const allowed=Math.min(target,requested); // never inflate to chase a quota
+  const assigned=distribute(allowed,running,running.map(i=>slots[i].miles));
+  for(const i of running){const s=slots[i],old=s.miles;s.miles=assigned[i]||0;
+   if(s.miles<old)s.integratedReason+=' Reduced '+old+' to '+s.miles+' miles within the one-plan mileage budget.';
+   if(!s.miles){s.type='Rest / mobility';s.pace='';}
+  }
+  const scheduled=sum(slots.map(s=>s.miles));
+  // Progression anchor is not advanced during an intentionally low-volume recovery or taper week.
+  if(!raceWeek&&!recoveryWeek&&scheduled>0)lastBuild=Math.max(lastBuild,scheduled);
+  lastLoad=scheduled||Math.max(0,lastLoad*.65);
+  out.push({phase:raceWeek?'Race week':recoveryWeek?'Post-race recovery':'Coordinated build',sessions:slots,note:'One coordinated training load; review both original workouts in the comparison dialog.'});
+ }
+ if(!out.length)return {error:'No future training weeks found.'};
+ const proposal={approved:false,signature,sourceIds:sources.map(e=>e.id),sourceNames:sources.map(e=>e.name),createdAt:new Date().toISOString(),conflicts:conflicts.length,races,notes,
+  trainingAnalysis:evidence,trainingFactors:{age:runnerProfile.age??null,weightLb:runnerProfile.weightLb??null,measuredMaxHr:runnerProfile.maxHr??null,experience:sources.map(e=>e.plan.profile.experience),recentHistoryUsed:evidence.recentRunCount},
+  plan:{profile:{...JSON.parse(JSON.stringify(sources[0].plan.profile)),goal:'Integrated race goals',startDate:start,raceDate:finalRace,weeks},weeks:out,created:new Date().toISOString(),assessment:{issues:flags,notes},adjustmentHistory:[],engineVersion:'research-informed-engine-2.1'}};
+ return proposal;
+}
+global.MileZeroTrainingEngine={build,analyze};
+})(typeof window!=='undefined'?window:globalThis);
