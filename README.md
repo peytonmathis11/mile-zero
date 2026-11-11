@@ -1,32 +1,29 @@
-# Stride Ultra — v0.1
+# MILE Ø · Version 0.3 — Runner-approved training intelligence
 
-Free mobile-first progressive web app prototype. The plan generator and adaptations are **rule-based** and do not use a language model. This is a starting point for product testing, not a fully validated training prescription.
+## What changed
+- Reviews your last 14 **logged running sessions**, comparing planned and actual miles, missed workouts, fatigue, effort, and pain flags.
+- Proposes conservative changes to up to 5 future **unlogged** workouts, and explains why.
+- You can approve individual workouts or decline all. Manually edited workouts are unchecked by default.
+- Approval / decline history appears on **Progress**, with undo of approvals where sessions have not changed since approval.
+- Workout distances, paces, days, notes and schedules remain editable.
+- Includes local storage and JSON / CSV export; no accounts or paid API required.
 
-## Try it right now
-Open `index.html` in a browser on a computer. Some browsers restrict local file storage or service workers for `file://` URLs; hosting via HTTPS is recommended for full PWA behavior.
+**This is rules-based training adaptation, not real AI.** It is not individualized medical advice. Pain flags trigger a conservative pause proposal; seek qualified advice where appropriate. AI model integration and longitudinal learning will require backend development and responsible data handling.
 
-## Host for free with GitHub Pages
-1. Create a free GitHub account at https://github.com.
-2. Create a new **public** repository, e.g. `stride-ultra`.
-3. Select `Add file` -> `Upload files` and upload the four files in this folder (not the zip itself): `index.html`, `manifest.webmanifest`, `icon.svg`, `sw.js`.
-4. Open the repository's **Settings** -> **Pages**. Under **Build and deployment**, choose **Deploy from a branch**, branch `main`, folder `/ (root)`, and **Save**.
-5. Once GitHub publishes it, visit the URL provided in Pages settings on your phone. You can add the site to the home screen from your phone browser's share/menu controls.
+## Update your GitHub Pages site
+1. Export a JSON backup from the current app first (Plan Settings → Download full backup).
+2. Unzip this package and upload its **files** to the **root** of your public `mile-zero` GitHub repository (not the enclosing folder).
+3. Confirm replacements, then commit. The service-worker cache version is updated for this release.
+4. Open your GitHub Pages address and refresh; if old content persists, check in a private browser window.
 
-GitHub Pages publishes the source repository publicly on its free tier. Do not upload secrets, API keys, or user data into the repository.
+### Saving data
+This release keeps the existing `mile_zero_v2` localStorage key intentionally, so it should retain data on the same browser and origin. Always export a backup before updating. Data will **not** synchronize between phones, browsers, or devices.
 
-## What works
-- 11 goal types including 50K, 50 mile, 100K, 100 mile, 6, 12 and 24 hours
-- Set starting mileage, experience, training days, training horizon, terrain, preferred long-run day and focus
-- Generate easy days, rest days, long runs, optional ultra back-to-backs, periodic recovery weeks, taper weeks
-- Navigate every week; mark runs complete
-- Adjust a week after missed workouts, fatigue or pain reports
-- Save automatically in browser localStorage and export entire plan to CSV
-- Offline access after hosting and initial service-worker cache (subject to browser storage settings)
+### Testing checklist
+- Create a plan and edit a future workout.
+- Log a few completed/missed runs with effort and fatigue.
+- Tap **Review training**; select individual proposed changes and approve them.
+- Check **Progress → Training decisions**, undo an approval, and verify only unchanged, unlogged sessions are restored.
+- Export and re-import a backup.
 
-## Limitations and next steps
-- No actual AI model, cloud sync, accounts, wearable integrations, GPS, or push notifications.
-- Personal data stays in local browser storage, which may be deleted by browser cleanup, private mode, or changing devices.
-- The generator does not yet know longest recent run, history of injuries, pace/HR, vertical gain, race dates, race specificity, cross-training, real calendar dates, or performance results.
-- Week totals are target approximations, not medical or coaching prescriptions; novice runners should use appropriate walk-run progressions instead of jumping to suggested run mileage.
-- Very short timelines for ultras are flagged, but still generate a draft. These drafts do not establish race readiness.
-- Before release to the public, add much stronger training safety guards, accessibility testing, product QA, and a privacy policy.
+Long-term concept: secure profiles, weekly trends and smart coaching using an actual AI model, with users in charge of every suggested edit.
