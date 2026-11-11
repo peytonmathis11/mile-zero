@@ -1,6 +1,7 @@
-MILE Ø v2.4 — decision explanation upgrade
+MILE Ø v2.5 — adaptive after-run reviews for integrated training
 
-Upload index.html, training-engine.js and sw.js together. Do NOT replace config.js.
-Back up your working files and export saved plans first.
-After upload, build a NEW integrated proposal to populate detailed decision records.
-Existing approved proposals are unchanged. The engine remains rules-based, NOT scientifically validated.
+Back up your current working index.html and export your plans before uploading.
+Upload index.html, training-engine.js and sw.js to the root of your GitHub repository together.
+Do NOT upload or replace config.js.
+After an integrated workout is logged, Mile Ø reviews recent integrated training and presents optional changes to future unlogged workouts. Nothing changes without runner approval.
+This remains a rules-based prototype; proposed percentage reductions are heuristics, not validated training recommendations.

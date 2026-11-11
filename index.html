@@ -603,12 +603,98 @@ function integratedEdit(wi,di){
  $('integratedEditForm').onsubmit=e=>{e.preventDefault();const mi=+$('ieMiles').value,pace=$('iePace').value.trim(),kind=$('ieType').value;if(!Number.isFinite(mi)||mi<0||mi>150||pace&&!paceMinutes(pace)){toast('Check the distance and pace.');return}if(s.type==='RACE DAY'&&kind!=='RACE DAY'&&!confirm('This is a race day. Remove the race marker?'))return;
  Object.assign(s,{type:kind,miles:kind==='RACE DAY'?0:halfMiles(mi),pace,details:$('ieDetails').value,manual:true});save();closeModal();render();toast('Integrated workout updated.');};
 }
+// v2.5 — after-run check-in for the integrated calendar.
+// A review is a proposal only; no approved workout is silently changed.
+let integratedReviewDraft = null;
+function integratedLoggedHistory(){
+ const plan=portfolio.integratedPlan?.plan;
+ if(!plan)return [];
+ const today=isoDate(new Date()),rows=[];
+ plan.weeks.forEach((w,wi)=>w.sessions.forEach((s,di)=>{
+  const date=isoDate(dateAt(plan.profile.startDate,wi,di));
+  if(date<=today&&(s.status==='done'||s.status==='missed'))rows.push({wi,di,date,s});
+ }));
+ return rows.sort((a,b)=>a.date.localeCompare(b.date)).slice(-14);
+}
+function reviewIntegratedTraining(){
+ if(!isIntegratedCurrent())return {error:'Your integrated schedule needs a new review before training adjustments.'};
+ const plan=portfolio.integratedPlan.plan;
+ const recent=integratedLoggedHistory();
+ const done=recent.filter(x=>x.s.status==='done');
+ const painful=recent.filter(x=>x.s.pain);
+ const strained=done.filter(x=>x.s.fatigue==='high'||(Number(x.s.rpe)>=8&&!/race day|tempo|interval|quality|threshold/i.test(x.s.type)));
+ const missed=recent.filter(x=>x.s.status==='missed');
+ const plannedMiles=recent.reduce((n,x)=>n+(Number(x.s.miles)||0),0);
+ const actualMiles=done.reduce((n,x)=>n+(Number(x.s.actual??x.s.miles)||0),0);
+ const ratio=plannedMiles>0?actualMiles/plannedMiles:1;
+ let kind='steady',factor=1,reason='Keep the current schedule. The recent logs do not justify a change to future workouts.';
+ if(painful.length){kind='pain';factor=0;reason=`Pain was reported in ${painful.length} recent workout(s). Consider pausing the next run(s) and seeking an individual assessment for concerning or persistent symptoms. Mile Ø cannot determine that running is safe.`;}
+ else if(strained.length>=2){kind='fatigue';factor=.8;reason=`${strained.length} of ${done.length} recent completed workouts reported high fatigue or unusually high effort for the session. A short reduction in training demand may allow recovery. The 20% adjustment is a configurable coaching heuristic, not a validated injury-prevention threshold.`;}
+ else if(recent.length>=4&&(missed.length>=2||ratio<.7)){kind='consistency';factor=.85;reason=`Across ${recent.length} recent logged workouts, ${actualMiles.toFixed(1)} of ${plannedMiles.toFixed(1)} scheduled miles were completed, with ${missed.length} missed session(s). The draft suggests a short return-to-consistency phase rather than making up missed mileage. The 15% change is a coaching heuristic.`;}
+ const now=isoDate(new Date());
+ const future=[];
+ plan.weeks.forEach((w,wi)=>w.sessions.forEach((s,di)=>{
+  const date=isoDate(dateAt(plan.profile.startDate,wi,di));
+  if(date<=now||s.status!=='planned'||s.manual||s.type==='RACE DAY'||!(Number(s.miles)>0))return;
+  future.push({wi,di,date,s});
+ }));
+ future.sort((a,b)=>a.date.localeCompare(b.date));
+ const selected=future.slice(0,kind==='pain'?2:5);
+ const proposals=factor===1?[]:selected.map(x=>{
+  const old=Number(x.s.miles)||0;
+  const miles=kind==='pain'?0:halfMiles(old*factor);
+  return {wi:x.wi,di:x.di,date:x.date,old,newMiles:miles,
+   oldType:x.s.type,newType:kind==='pain'?'Rest / mobility':/tempo|interval|threshold|quality|hill|speed/i.test(x.s.type)?'Easy run':x.s.type,
+   reason};
+ }).filter(x=>x.newMiles!==x.old||x.newType!==x.oldType);
+ let details=`Based on ${recent.length} logged integrated sessions (${done.length} completed), ${actualMiles.toFixed(1)} actual miles and ${plannedMiles.toFixed(1)} scheduled miles.`;
+ const measured=done.filter(x=>Number.isFinite(Number(x.s.averageHr))&&x.s.averageHr!==null&&x.s.averageHr!=='');
+ if(measured.length)details+=` Heart rate was recorded for ${measured.length} session(s). It is context only; this review does not diagnose fitness or fatigue from a single HR reading.`;
+ const rp=runnerProfile();
+ if(rp?.maxHr)details+=` Your entered maximum heart rate is ${rp.maxHr} bpm; this review does not assume a high HR always means overtraining.`;
+ if(done.length<3)details+=' Limited training history: recommendations may be less reliable.';
+ return {kind,reason,details,proposals,logged:recent.length};
+}
+function openIntegratedTrainingReview(){
+ if(!requireAccount()||!isIntegratedCurrent())return;
+ integratedReviewDraft=reviewIntegratedTraining();
+ const r=integratedReviewDraft;
+ if(r.error){toast(r.error);return;}
+ const options=r.proposals.length?`<h3 style="margin-top:16px">Proposed upcoming changes</h3><p class="subtle">No workout changes unless you approve the selected suggestions. Logged runs, race days, and your manually edited workouts are excluded.</p>${r.proposals.map((x,i)=>`<label class="review-option"><input type="checkbox" data-integrated-review="${i}" checked><span><strong>${esc(x.date)} · ${esc(days[x.di])}</strong><small>${esc(x.oldType)} · ${x.old} mi → ${esc(x.newType)} · ${x.newMiles} mi</small></span></label>`).join('')}<div class="actions"><button class="btn dark" type="button" onclick="approveIntegratedTrainingReview()">Approve selected changes</button><button class="btn light" type="button" onclick="declineIntegratedTrainingReview()">Keep current schedule</button></div>`:`<div class="note" style="margin-top:14px">No workout changes suggested right now. Keep logging training so Mile Ø can compare multiple sessions over time.</div><div class="actions"><button class="btn light" onclick="closeModal()">Return to Calendar</button></div>`;
+ modal(`<div class="eyebrow">MILE Ø / INTEGRATED TRAINING REVIEW</div><h2>${r.kind==='steady'?'Training log reviewed':'Your training may need an adjustment'}</h2><p>${esc(r.reason)}</p><p class="subtle">${esc(r.details)}</p><div class="note warn">Research-informed principles: consider completed training, perceived effort, symptoms, and recovery before changing load. The specific percentages are design heuristics, not scientifically validated prescriptions. Pain needs individualized attention.</div>${options}`);
+}
+function approveIntegratedTrainingReview(){
+ if(!isIntegratedCurrent()||!integratedReviewDraft)return;
+ const picked=[...document.querySelectorAll('[data-integrated-review]:checked')].map(el=>integratedReviewDraft.proposals[Number(el.dataset.integratedReview)]).filter(Boolean);
+ if(!picked.length){toast('Choose a suggestion or keep your current schedule.');return;}
+ const plan=portfolio.integratedPlan.plan,changes=[],today=isoDate(new Date());
+ for(const p of picked){
+  const s=plan.weeks[p.wi]?.sessions[p.di];
+  if(!s||s.status!=='planned'||s.manual||s.type==='RACE DAY'||s.miles!==p.old||isoDate(dateAt(plan.profile.startDate,p.wi,p.di))<=today)continue;
+  const before=clone(s);
+  s.miles=p.newMiles;s.type=p.newType;s.manual=true;
+  s.details=(s.details||'')+' [Runner-approved adaptation: '+integratedReviewDraft.kind+'.]';
+  s.integratedReason=(s.integratedReason||'')+' Adapted after logged training; original combined-workout comparison is retained.';
+  changes.push({wi:p.wi,di:p.di,before,after:clone(s)});
+ }
+ if(!changes.length){toast('Those workouts changed. Start a fresh review.');closeModal();return;}
+ portfolio.integratedReviewHistory??=[];
+ portfolio.integratedReviewHistory.push({id:'ir-'+Date.now(),date:new Date().toISOString(),action:'approved',kind:integratedReviewDraft.kind,reason:integratedReviewDraft.reason,changes});
+ integratedReviewDraft=null;save();closeModal();render();toast(`${changes.length} integrated workout(s) adjusted with your approval.`);
+}
+function declineIntegratedTrainingReview(){
+ if(!integratedReviewDraft)return;
+ portfolio.integratedReviewHistory??=[];
+ portfolio.integratedReviewHistory.push({id:'ir-'+Date.now(),date:new Date().toISOString(),action:'declined',kind:integratedReviewDraft.kind,reason:integratedReviewDraft.reason,changes:[]});
+ integratedReviewDraft=null;save();closeModal();render();toast('No changes made to your integrated calendar.');
+}
+
 function integratedLog(wi,di){
  if(!requireAccount()||!isIntegratedCurrent())return;
  const s=portfolio.integratedPlan.plan.weeks[wi]?.sessions[di];if(!s)return;
  modal(`<h2>Log integrated workout</h2><p class="subtle">One training log for this day. Do not log the same run again in the original race plans.</p><form id="integratedLogForm"><div class="grid"><div class="field"><label>Status</label><select id="ilStatus">${['planned','done','missed'].map(x=>`<option value="${x}" ${s.status===x?'selected':''}>${x==='done'?'Completed':x==='missed'?'Missed':'Not logged'}</option>`).join('')}</select></div><div class="field"><label>Actual miles</label><input id="ilMiles" type="number" min="0" max="150" step="0.1" value="${s.actual??s.miles}"></div><div class="field"><label>Actual pace (mm:ss)</label><input id="ilPace" value="${esc(s.actualPace||'')}" placeholder="10:30"></div><div class="field"><label>Average HR (optional)</label><input id="ilHr" type="number" min="40" max="240" value="${s.averageHr??''}"></div><div class="field"><label>Effort / RPE</label><select id="ilRpe"><option value="">Not sure</option>${Array.from({length:10},(_,i)=>`<option ${s.rpe===i+1?'selected':''}>${i+1}</option>`).join('')}</select></div><div class="field"><label>Fatigue</label><select id="ilFatigue"><option value="">Not sure</option>${['low','moderate','high'].map(x=>`<option ${s.fatigue===x?'selected':''}>${x}</option>`).join('')}</select></div></div><div class="field"><label><input id="ilPain" type="checkbox" ${s.pain?'checked':''}> Pain or injury concern</label></div><div class="field"><label>Run notes</label><textarea id="ilNotes">${esc(s.notes||'')}</textarea></div><div class="actions"><button type="submit" class="btn dark">Save training log</button><button type="button" class="btn light" onclick="closeModal()">Cancel</button></div></form>`);
  $('integratedLogForm').onsubmit=e=>{e.preventDefault();const status=$('ilStatus').value,actual=+$('ilMiles').value,pace=$('ilPace').value.trim(),hr=numberOrNull('ilHr');if(!Number.isFinite(actual)||actual<0||actual>150||pace&&!paceMinutes(pace)||hr!==null&&(!Number.isInteger(hr)||hr<40||hr>240)){toast('Check your distance, pace and heart rate.');return;}
- Object.assign(s,{status,actual:status==='done'?round(actual):null,actualPace:status==='done'?pace:'',averageHr:status==='done'?hr:null,rpe:status==='done'&&$('ilRpe').value?+$('ilRpe').value:null,fatigue:status==='done'?$('ilFatigue').value:null,pain:$('ilPain').checked,notes:$('ilNotes').value});save();closeModal();render();toast('Integrated run saved to your account.');};
+ Object.assign(s,{status,actual:status==='done'?round(actual):null,actualPace:status==='done'?pace:'',averageHr:status==='done'?hr:null,rpe:status==='done'&&$('ilRpe').value?+$('ilRpe').value:null,fatigue:status==='done'?$('ilFatigue').value:null,pain:$('ilPain').checked,notes:$('ilNotes').value});save();closeModal();render();toast('Integrated run saved to your account.');if(status==='done'||status==='missed')openIntegratedTrainingReview();};
 }
 function calendarMode(){return portfolio.calendarMode==='integrated'?'integrated':'separate';}
 function setCalendarMode(mode){
@@ -660,7 +746,7 @@ function renderIntegration(){
  const planned=sum(w.sessions.map(s=>s.miles)),done=sum(w.sessions.filter(s=>s.status==='done').map(s=>s.actual??s.miles));
  root.innerHTML=`<div class="panel" style="border-left:5px solid #52785C;margin-bottom:16px"><div class="eyebrow">MILE Ø / MULTI-RACE COORDINATION</div><h2 style="margin:8px 0">${approved?'Integrated '+x.sourceNames.map(esc).join(' / '):'Preview: '+x.sourceNames.map(esc).join(' / ')}</h2><p class="subtle">${x.sourceNames.map(esc).join(' + ')} · ${x.plan.weeks.length} weeks · One workout per day · ${x.conflicts} overlapping session/race dates flagged</p><div class="note ${approved&&!current?'warn':''}">${approved?(valid?'<strong>Approved plan:</strong> Log and edit workouts here. Do not duplicate these runs in individual plans.':'<strong>Needs review:</strong> The original plans changed. Your previous integrated workouts and logs are preserved, but logging is paused until you build and approve a new schedule.'):'<strong>Preview:</strong> Review the workouts below before choosing this schedule. Your separate plans stay unchanged. This version uses evidence-informed planning rules, not live AI. It is a draft requiring your review.'}</div>
  ${raceCheckinStatus()?`<div class="note" style="margin-top:12px"><strong>Race 1 recovery check-in</strong><p class="subtle" style="margin:7px 0">${raceRecoveryFeedback()?`Last submitted for ${esc(raceCheckinStatus().first.name)}. You can update how you feel as recovery progresses.`:`You have passed ${esc(raceCheckinStatus().first.name)}. Tell Mile Ø how the race and recovery went before transitioning to ${esc(raceCheckinStatus().after.name)}.`}</p><button class="btn light sm" type="button" onclick="openRaceRecoveryCheckin()">${raceRecoveryFeedback()?'Update race recovery':'Check in after Race 1'} →</button></div>`:''}
- <div class="actions" style="margin-top:12px">${!approved?`<button class="btn dark" onclick="approveIntegration()">Approve & use this schedule</button><button class="btn light" onclick="discardIntegrationDraft()">Discard proposal</button>`:`<button class="btn light" onclick="prepareIntegration()">Rebuild proposal</button>`}<button class="btn light" onclick="navigate('plans')">My Plans</button></div>
+ <div class="actions" style="margin-top:12px">${!approved?`<button class="btn dark" onclick="approveIntegration()">Approve & use this schedule</button><button class="btn light" onclick="discardIntegrationDraft()">Discard proposal</button>`:`<button class="btn light" onclick="prepareIntegration()">Rebuild proposal</button>${valid?'<button class="btn dark" onclick="openIntegratedTrainingReview()">Review recent training</button>':''}`}<button class="btn light" onclick="navigate('plans')">My Plans</button></div>
 
  ${x.raceRecoverySummary?`<div class="note" style="margin:10px 0"><strong>Race 1 recovery transition:</strong> ${esc(x.raceRecoverySummary.concern)} recovery concern · initial recovery window ${x.raceRecoverySummary.recoveryDays} days. Workout volume and intensity have been adjusted conservatively. Review each proposed session; recovery cannot be predicted from this questionnaire alone.</div>`:''}
  <p class="subtle">${runnerProfile().trainingCity?`Weather context city: ${esc(runnerProfile().trainingCity)} (current-condition reviews only; this schedule is not yet AI-adjusted).`:'Save a training city in Profile to enable current-weather context in feedback.'}</p><div class="section-title"><h3>Week ${wi+1} · ${esc(dateLabel(dt))}</h3><div class="weekcontrols"><button class="btn light sm" onclick="integrationMove(-1)" ${wi===0?'disabled':''}>← Previous</button><button class="btn light sm" onclick="integrationMove(1)" ${wi===x.plan.weeks.length-1?'disabled':''}>Next →</button></div></div><div class="cards"><div class="card"><div class="muted">THIS WEEK · PLANNED</div><div class="metric">${planned} mi</div></div><div class="card"><div class="muted">LOGGED</div><div class="metric">${done} mi</div></div><div class="card"><div class="muted">ACTIVE GOALS</div><div class="metric">2</div></div></div>
