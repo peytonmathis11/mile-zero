@@ -134,18 +134,28 @@ function paceMinutes(s){if(!s)return null;let m=/^(\d{1,2}):([0-5]\d)$/.exec(s);
 function fmtPace(n){if(!n)return 'By effort';let sec=Math.round(n*60);return `${Math.floor(sec/60)}:${String(sec%60).padStart(2,'0')}/mi`}
 function baseProfile(){return {goal:'50K',experience:'steady',mileage:25,days:5,weeks:16,longday:5,terrain:'trail',focus:'finish',pace:'10:30',startDate:monday(),raceDate:addCalendarDays(monday(),16*7-2),recentLong:'',consistency:'steady',raceSurface:'trail'}}
 function getProfile(){return {goal:$('goal').value,experience:$('experience').value,mileage:+$('mileage').value,days:+$('days').value,weeks:+$('weeks').value,longday:+$('longday').value,terrain:$('terrain').value,focus:$('focus').value,pace:$('pace').value.trim(),startDate:$('startDate').value,raceDate:$('raceDate').value,recentLong:$('recentLong').value,consistency:$('consistency').value,raceSurface:$('terrain').value}}
-function setProfile(p){
-  for(const k of Object.keys(baseProfile())) if($(k)) $(k).value=p[k]??baseProfile()[k];
-  if(p.raceDate){syncRaceDateForm();}
-  else{
-    $('weeks').value=p.weeks??16;
-    $('raceDate').value='';
-    $('raceDateHelp').textContent='This older plan has no race date. Choose one when you regenerate it.';
+function setProfile(p)
+function setProfile(p) {
+  for (const k of Object.keys(baseProfile())) {
+    if ($(k)) {
+      $(k).value = p[k] ?? baseProfile()[k];
+    }
   }
-  const entry=currentEntry();
-  $('customPlanName').value=entry?.customName===true?entry.name:'';
+
+  if (p.raceDate) {
+    syncRaceDateForm();
+  } else {
+    $('weeks').value = p.weeks ?? 16;
+    $('raceDate').value = '';
+    $('raceDateHelp').textContent =
+      'This older plan has no race date. Choose one when you regenerate it.';
+  }
+
+  const entry = currentEntry();
+  $('customPlanName').value =
+    entry?.customName === true ? entry.name : '';
 }
-// v0.9: evidence-informed training heuristics. Not a clinically validated prescription.
+v0.9: evidence-informed training heuristics. Not a clinically validated prescription.
 const raceBlueprints={
  'First mile / run-walk':{family:'beginner',longShare:.22,longCap:3,quality:0,taper:0},
  '5K':{family:'short',longShare:.23,longCap:13,quality:2,taper:1},
