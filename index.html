@@ -62,20 +62,19 @@ body{background:linear-gradient(180deg,#E6E2D8 0%,#F0EEE8 55%,#E5E0D5 100%);colo
 <div id="homeContent"></div></section>
 <section id="plans" class="tab hidden">
 <div id="plansContent"></div>
-<div class="actions" style="margin:14px 0 18px"><button type="button" class="btn dark sm" onclick="navigate('settings')">+ Build / Edit Plan</button><button type="button" class="btn light sm" onclick="navigate('combined')">View All Plans Calendar</button></div>
-<details id="planBuilderPanel" class="panel" style="margin-top:18px">
-<summary style="cursor:pointer;font-weight:850;font-size:17px;color:#20372B;padding:4px 0">Build or edit a training plan</summary>
-<div id="settings" style="padding-top:14px"><div class="section-title"><h2>Build a race-specific plan</h2><button class="btn light sm" type="button" onclick="navigate('plans')">← My plans</button></div><div class="panel"><p class="subtle">Weather is optional training context, configured under Runner Profile. Weather adds context to reviews. Plans are grounded in your training history, not a single weather forecast. </p><p class="subtle">Version 1.1 begins at your current comfortable mileage, then progressively builds toward your race with easier recovery weeks, rest days, and a race-specific taper. Your starting mileage is not a lifetime ceiling. These are coaching heuristics, not a validated individual prescription. Update your preferences and regenerate your schedule when you want. Regenerating changes only the selected plan. Other saved plans are not changed. Export a backup first.</p><form id="builder"><div class="field" style="margin-bottom:20px">
+
+<div id="planBuilderPanel" class="panel hidden" style="margin-top:18px">
+<div id="settings" style="padding-top:14px"><div class="section-title"><h2>Build a race-specific plan</h2><button class="btn light sm" type="button" onclick="closePlanEditor()">← Close editor</button></div><div class="panel"><p class="subtle">Weather is optional training context, configured under Runner Profile. Weather adds context to reviews. Plans are grounded in your training history, not a single weather forecast. </p><p class="subtle">Version 1.1 begins at your current comfortable mileage, then progressively builds toward your race with easier recovery weeks, rest days, and a race-specific taper. Your starting mileage is not a lifetime ceiling. These are coaching heuristics, not a validated individual prescription. Update your preferences and regenerate your schedule when you want. Regenerating changes only the selected plan. Other saved plans are not changed. Export a backup first.</p><form id="builder"><div class="field" style="margin-bottom:20px">
 <label for="customPlanName">Training Plan Name (Optional)</label>
 <input type="text" id="customPlanName" maxlength="80" placeholder="e.g. My First 50 Miler">
 <small class="muted">Leave blank to use an automatic race-distance name.</small>
 <button type="button" class="btn light sm" onclick="saveCustomPlanName()" style="margin-top:10px;align-self:flex-start">Save Plan Name</button>
-</div><div class="grid"><div class="field"><label for="goal">What are you training for?</label><select id="goal"><option>First mile / run-walk</option><option>5K</option><option>10K</option><option>Half Marathon</option><option>Marathon</option><option>50K</option><option>50 Mile</option><option>100K</option><option>100 Mile</option><option>6 Hour</option><option>12 Hour</option><option>24 Hour</option></select></div><div class="field"><label for="experience">Experience level</label><select id="experience"><option value="new">New / returning runner</option><option value="steady">Consistent runner</option><option value="advanced">Experienced / high volume</option></select></div><div class="field"><label for="mileage">Current comfortable weekly miles (starting point, NOT a cap)</label><input type="number" id="mileage" min="0" max="180" step="0.5" required></div><div class="field"><label for="days">Running days per week</label><select id="days"><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option></select><small class="muted">If you select 7, the draft still includes one recovery/rest day.</small></div><div class="field"><label for="raceDate">Race day / goal date</label><input type="date" id="raceDate" required><small class="muted">Choose when your race happens. Your taper and race week will align to this date.</small></div><div class="field"><label for="weeks">Training weeks (calculated automatically)</label><input type="number" min="4" max="52" id="weeks" readonly required><small class="muted" id="raceDateHelp">Choose a start date and race date to calculate your training window.</small></div><div class="field"><label for="longday">Preferred long-run day</label><select id="longday"><option value="0">Monday</option><option value="1">Tuesday</option><option value="2">Wednesday</option><option value="3">Thursday</option><option value="4">Friday</option><option value="5">Saturday</option><option value="6">Sunday</option></select></div><div class="field"><label for="terrain">Terrain</label><select id="terrain"><option value="road">Road / treadmill</option><option value="trail">Trails / mixed</option><option value="flat">Flat loop / timed ultra</option></select></div><div class="field"><label for="focus">Main priority</label><select id="focus"><option value="finish">Build endurance / finish</option><option value="speed">Improve speed / performance</option><option value="durability">Consistency and durability</option></select></div><div class="field"><label for="recentLong">Longest comfortable run in the last 30 days (miles)</label><input id="recentLong" type="number" min="0" max="100" step="0.5" placeholder="e.g. 8; optional"></div><div class="field"><label for="consistency">Recent training consistency</label><select id="consistency"><option value="steady">Regular for 6+ weeks</option><option value="variable">Some missed weeks / variable training</option><option value="returning">Returning after a break</option></select></div><div class="field"><label for="pace">Default easy pace (min per mile)</label><input id="pace" placeholder="10:30" pattern="[0-9]{1,2}:[0-5][0-9]"></div><div class="field"><label for="startDate">Plan start (Monday)</label><input id="startDate" type="date" required></div></div><div class="actions"><button class="btn dark" type="submit">Generate my plan</button><button class="btn light" type="button" id="exportBtn">Export training CSV</button><button class="btn light" type="button" id="backupBtn">Download all plans backup</button><button class="btn light" type="button" id="importBtn">Import backup</button></div><p class="subtle">Training dates are calculated backwards from your race date. Guest previews remain temporarily on this browser for up to 48 hours and are not saved to My Plans. Signed-in runners can save to their account; always keep backups.</p><div id="formWarning"></div></form></div><div class="section-title"><h2>Runner-approved training intelligence</h2></div><div class="panel"><p>After you log training, Mile Zero compares planned and actual mileage, how hard sessions felt, recent missed workouts, and fatigue or pain reports. It proposes changes to specific upcoming runs, explains why, and asks you to approve each workout individually. Nothing changes automatically. Declines and approvals are recorded, and approvals can be undone if the sessions have not been modified or logged.</p><div class="note">This version uses a transparent adaptive rules engine, <strong>not a live AI language model</strong>. It does not diagnose injuries or guarantee an appropriate training load. Real model-based AI, wearables, and account syncing require additional infrastructure and may have ongoing costs.</div></div></div></details>
+</div><div class="grid"><div class="field"><label for="goal">What are you training for?</label><select id="goal"><option>First mile / run-walk</option><option>5K</option><option>10K</option><option>Half Marathon</option><option>Marathon</option><option>50K</option><option>50 Mile</option><option>100K</option><option>100 Mile</option><option>6 Hour</option><option>12 Hour</option><option>24 Hour</option></select></div><div class="field"><label for="experience">Experience level</label><select id="experience"><option value="new">New / returning runner</option><option value="steady">Consistent runner</option><option value="advanced">Experienced / high volume</option></select></div><div class="field"><label for="mileage">Current comfortable weekly miles (starting point, NOT a cap)</label><input type="number" id="mileage" min="0" max="180" step="0.5" required></div><div class="field"><label for="days">Running days per week</label><select id="days"><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option></select><small class="muted">If you select 7, the draft still includes one recovery/rest day.</small></div><div class="field"><label for="raceDate">Race day / goal date</label><input type="date" id="raceDate" required><small class="muted">Choose when your race happens. Your taper and race week will align to this date.</small></div><div class="field"><label for="weeks">Training weeks (calculated automatically)</label><input type="number" min="4" max="52" id="weeks" readonly required><small class="muted" id="raceDateHelp">Choose a start date and race date to calculate your training window.</small></div><div class="field"><label for="longday">Preferred long-run day</label><select id="longday"><option value="0">Monday</option><option value="1">Tuesday</option><option value="2">Wednesday</option><option value="3">Thursday</option><option value="4">Friday</option><option value="5">Saturday</option><option value="6">Sunday</option></select></div><div class="field"><label for="terrain">Terrain</label><select id="terrain"><option value="road">Road / treadmill</option><option value="trail">Trails / mixed</option><option value="flat">Flat loop / timed ultra</option></select></div><div class="field"><label for="focus">Main priority</label><select id="focus"><option value="finish">Build endurance / finish</option><option value="speed">Improve speed / performance</option><option value="durability">Consistency and durability</option></select></div><div class="field"><label for="recentLong">Longest comfortable run in the last 30 days (miles)</label><input id="recentLong" type="number" min="0" max="100" step="0.5" placeholder="e.g. 8; optional"></div><div class="field"><label for="consistency">Recent training consistency</label><select id="consistency"><option value="steady">Regular for 6+ weeks</option><option value="variable">Some missed weeks / variable training</option><option value="returning">Returning after a break</option></select></div><div class="field"><label for="pace">Default easy pace (min per mile)</label><input id="pace" placeholder="10:30" pattern="[0-9]{1,2}:[0-5][0-9]"></div><div class="field"><label for="startDate">Plan start (Monday)</label><input id="startDate" type="date" required></div></div><div class="actions"><button class="btn dark" type="submit">Generate my plan</button><button class="btn light" type="button" id="exportBtn">Export training CSV</button><button class="btn light" type="button" id="backupBtn">Download all plans backup</button><button class="btn light" type="button" id="importBtn">Import backup</button></div><p class="subtle">Training dates are calculated backwards from your race date. Guest previews remain temporarily on this browser for up to 48 hours and are not saved to My Plans. Signed-in runners can save to their account; always keep backups.</p><div id="formWarning"></div></form></div><div class="section-title"><h2>Runner-approved training intelligence</h2></div><div class="panel"><p>After you log training, Mile Zero compares planned and actual mileage, how hard sessions felt, recent missed workouts, and fatigue or pain reports. It proposes changes to specific upcoming runs, explains why, and asks you to approve each workout individually. Nothing changes automatically. Declines and approvals are recorded, and approvals can be undone if the sessions have not been modified or logged.</p><div class="note">This version uses a transparent adaptive rules engine, <strong>not a live AI language model</strong>. It does not diagnose injuries or guarantee an appropriate training load. Real model-based AI, wearables, and account syncing require additional infrastructure and may have ongoing costs.</div></div></div></div>
 <details id="allPlansPanel" class="panel" style="margin-top:16px">
 <summary style="cursor:pointer;font-weight:850;font-size:17px;color:#20372B;padding:4px 0">All saved plans · combined calendar</summary>
 <div id="combined" style="padding-top:14px"><div id="combinedContent"></div></div></details>
 </section>
-<section id="plan" class="tab hidden"><div id="planContent"></div></section>
+<section id="plan" class="tab hidden"><details id="coordinatedCalendarPanel" class="panel" style="margin-bottom:16px"><summary style="cursor:pointer;font-weight:800;font-size:17px">All race goals · One run per day (preview)</summary><p class="subtle">A consolidated view, not an automatically revised training plan. Original schedules are preserved.</p><div id="calendarCombinedContent"></div></details><div id="planContent"></div></section>
 <section id="progress" class="tab hidden">
 <div id="progressContent"></div>
 <div id="trends" style="margin-top:26px">
@@ -323,7 +322,34 @@ const uid=()=>('p'+Date.now().toString(36)+Math.random().toString(36).slice(2,9)
 function validPortfolio(x){return x&&x.version===2&&Array.isArray(x.plans)&&x.plans.every(e=>e&&typeof e.id==='string'&&typeof e.name==='string'&&validPlan(e.plan))}
 function normalizePortfolio(x){if(validPortfolio(x))return {...clone(x),runnerProfile:clone(x.runnerProfile||{})};if(validPlan(x)){let id=uid();return {version:2,activeId:id,plans:[{id,name:x.profile.goal+' training',plan:clone(x)}],runnerProfile:{}}}return {version:2,activeId:null,plans:[],runnerProfile:{}}}
 function currentEntry(){return portfolio.plans.find(x=>x.id===portfolio.activeId)||null}
-function setActive(){let e=currentEntry();if(!e&&portfolio.plans.length){portfolio.activeId=portfolio.plans[0].id;e=currentEntry()}data=e?e.plan:null;selectedWeek=todayIndex()}
+const MAX_ACTIVE_PLANS=2;
+function activePlanIds(){
+ const ids=(Array.isArray(portfolio.activePlanIds)?portfolio.activePlanIds:[]).filter(id=>portfolio.plans.some(e=>e.id===id));
+ if(!Array.isArray(portfolio.activePlanIds)&&portfolio.activeId&&portfolio.plans.some(e=>e.id===portfolio.activeId))ids.push(portfolio.activeId);
+ return [...new Set(ids)].slice(0,MAX_ACTIVE_PLANS);
+}
+function ensureActivePlans(){portfolio.activePlanIds=activePlanIds();}
+function toggleActivePlan(id){
+ if(!requireAccount())return;
+ if(!portfolio.plans.some(e=>e.id===id))return;
+ const active=activePlanIds(),has=active.includes(id);
+ if(!has&&active.length>=MAX_ACTIVE_PLANS){toast('Two plans are already active. Pause one before activating another.');return;}
+ portfolio.activePlanIds=has?active.filter(x=>x!==id):[...active,id];
+ if(!has){portfolio.activeId=id;setActive();}
+ else if(portfolio.activeId===id&&portfolio.activePlanIds.length){portfolio.activeId=portfolio.activePlanIds[0];setActive();}
+ save();render();toast(has?'Plan paused.':'Plan active. Combined calendar updated.');
+}
+function editPlan(id){
+ if(!requireAccount())return;
+ if(!portfolio.plans.some(e=>e.id===id))return;
+ storePortfolio();portfolio.activeId=id;setActive();
+ const panel=$('planBuilderPanel');panel.classList.remove('hidden');
+ navigate('settings');
+ toast('Editing '+currentEntry().name+'. Generating replaces this plan’s existing workouts and logs.');
+}
+function closePlanEditor(){$('planBuilderPanel').classList.add('hidden');navigate('plans');}
+
+function setActive(){ensureActivePlans();let e=currentEntry();if(!e&&portfolio.plans.length){portfolio.activeId=portfolio.plans[0].id;e=currentEntry()}data=e?e.plan:null;selectedWeek=todayIndex()}
 function storePortfolio(sync=true){if(!authUser)return;try{let e=currentEntry();if(e&&data)e.plan=data;localStorage.setItem(portfolioKey(),JSON.stringify(portfolio));if(authUser&&sync)scheduleCloudSync()}catch(err){toast('Local save failed: export a backup.')}}
 function save(){storePortfolio(true)}
 function load(){
@@ -335,8 +361,15 @@ function load(){
   return !!data;
  }
  try{let v=JSON.parse(localStorage.getItem(portfolioKey()));if(validPortfolio(v)){portfolio=v;setActive();return !!data}}catch(e){}try{let old=JSON.parse(localStorage.getItem(activeStorageKey()));if(validPlan(old)){portfolio=normalizePortfolio(old);setActive();storePortfolio(false);return true}}catch(e){}portfolio=normalizePortfolio(null);data=null;return false}
-function createPlan(){if(data){if(!confirm(authUser?'Create another plan? Your current plan will stay saved.':'Replace your temporary preview with a new one?'))return}portfolio.activeId=null;data=null;setProfile(baseProfile());navigate('settings');toast('Choose your goal and generate a new plan. Existing plans are safe.')}
-function switchPlan(id){let e=portfolio.plans.find(p=>p.id===id);if(!e)return;storePortfolio();portfolio.activeId=id;setActive();storePortfolio();navigate('home');toast('Switched to '+e.name)}
+function createPlan(){
+ if(data&& !confirm(authUser?'Create another plan? Your existing plans will stay saved.':'Replace your temporary preview with a new one?'))return;
+ // New plan is not an edit to an existing plan. Do not mark it as active until it is saved.
+ portfolio.activeId=null;data=null;
+ $('planBuilderPanel').classList.remove('hidden');
+ navigate('settings');setProfile(baseProfile());
+ toast('Build your new plan. Existing plans are safe.');
+}
+function switchPlan(id){let e=portfolio.plans.find(p=>p.id===id);if(!e)return;storePortfolio();portfolio.activeId=id;setActive();storePortfolio();navigate('home');toast('Viewing '+e.name)}
 function saveCustomPlanName(){
   if(!requireAccount())return;
   const entry=currentEntry();
@@ -353,7 +386,7 @@ function renamePlan(id){if(!requireAccount())return;
   e.name=name;e.customName=(name!==e.plan.profile.goal+' training');
   save();render();
 }
-function deletePlan(id){if(!requireAccount())return;let e=portfolio.plans.find(p=>p.id===id);if(!e||!confirm('Delete "'+e.name+'" and all of its workout logs? Download a backup first. This cannot be undone after syncing.'))return;portfolio.plans=portfolio.plans.filter(p=>p.id!==id);if(portfolio.activeId===id)portfolio.activeId=portfolio.plans[0]?.id||null;setActive();save();navigate('plans');toast('Plan deleted.')}
+function deletePlan(id){if(!requireAccount())return;let e=portfolio.plans.find(p=>p.id===id);if(!e||!confirm('Delete "'+e.name+'" and all of its workout logs? Download a backup first. This cannot be undone after syncing.'))return;portfolio.plans=portfolio.plans.filter(p=>p.id!==id);portfolio.activePlanIds=activePlanIds().filter(x=>x!==id);if(portfolio.activeId===id)portfolio.activeId=portfolio.plans[0]?.id||null;setActive();save();navigate('plans');toast('Plan deleted.')}
 function renderPlans(){
 // Repair earlier stale distance-based names without regenerating workouts.
 let nameChanged=false;
@@ -364,19 +397,76 @@ for(const e of portfolio.plans){
   }
 }
 if(nameChanged)save();
-let root=$('plansContent');root.innerHTML=`<div class="section-title"><div><div class="eyebrow">MILE Ø / YOUR JOURNEY</div><h2>My training plans</h2></div><button class="btn dark" onclick="createPlan()">+ New plan</button></div><p class="subtle">Save independent plans, or expand the combined calendar below to see them together. The shared calendar is for viewing conflicts, not stacking training volume.</p><button class="btn light sm" onclick="navigate('combined')">View combined calendar →</button>${portfolio.plans.length?`<div class="plans-grid">${portfolio.plans.map(e=>{let done=e.plan.weeks.flatMap(w=>w.sessions).filter(s=>s.status==='done'),miles=sum(done.map(s=>s.actual??s.miles)),active=e.id===portfolio.activeId;return `<div class="panel"><div class="eyebrow">${active?'ACTIVE PLAN':'SAVED PLAN'}</div><h3 style="margin-top:8px">${esc(e.name)}</h3><p class="subtle">${esc(e.plan.profile.goal)} · ${e.plan.weeks.length} weeks · ${miles} mi logged</p><div class="actions"><button class="btn ${active?'light':'dark'} sm" onclick="switchPlan('${e.id}')">${active?'Open dashboard':'Activate plan'}</button><button class="btn outline sm" onclick="renamePlan('${e.id}')">Rename</button><button class="btn danger sm" onclick="deletePlan('${e.id}')">Delete</button></div></div>`}).join('')}</div>`:'<div class="empty"><h2>No plans yet</h2><p>Start with any distance. You can add other plans whenever you like.</p><button class="btn dark" onclick="createPlan()">Build your first plan</button></div>'}<div class="note warn" style="margin-top:15px">Two plans on the same dates are <strong>not</strong> a combined training program. For now, use one plan as your primary schedule so you do not accidentally double your training load. Combined-goal scheduling is a future feature.</div>`}
+let root=$('plansContent');
+const activeIds=activePlanIds();
+const cardsHtml=portfolio.plans.map(e=>{
+ const done=e.plan.weeks.flatMap(w=>w.sessions).filter(s=>s.status==='done');
+ const miles=sum(done.map(s=>s.actual??s.miles));
+ const isActive=activeIds.includes(e.id),isViewed=e.id===portfolio.activeId;
+ return `<div class="panel"><div class="eyebrow">${isActive?'● ACTIVE GOAL':'○ PAUSED GOAL'}${isViewed?' · VIEWING':''}</div><h3 style="margin-top:8px">${esc(e.name)}</h3><p class="subtle">${esc(e.plan.profile.goal)} · ${e.plan.weeks.length} weeks · ${miles} mi logged</p><div class="actions"><button class="btn ${isViewed?'light':'dark'} sm" onclick="switchPlan('${e.id}')">${isViewed?'Dashboard':'View plan'}</button><button class="btn ${isActive?'outline':'dark'} sm" onclick="toggleActivePlan('${e.id}')">${isActive?'Pause goal':'Make active'}</button><button class="btn light sm" onclick="editPlan('${e.id}')">Build / Edit</button><button class="btn outline sm" onclick="renamePlan('${e.id}')">Rename</button><button class="btn danger sm" onclick="deletePlan('${e.id}')">Delete</button></div></div>`;
+}).join('');
+root.innerHTML=`<div class="section-title"><div><div class="eyebrow">MILE Ø / YOUR JOURNEY</div><h2>My training plans</h2></div><button class="btn dark" onclick="createPlan()">+ New plan</button></div>
+<p class="subtle">Save as many race plans as you like. Choose up to two active goals; you can view or edit any saved plan independently. The combined calendar previews just one run per day while coordinated AI training is being developed.</p>
+<div class="note" style="margin-bottom:12px"><strong>${activeIds.length} / ${MAX_ACTIVE_PLANS} active plans</strong> · Choose your active race goals with the buttons on each plan card. Viewing a plan does not change your active goals.</div>
+<button class="btn light sm" onclick="navigate('combined')">View combined calendar →</button>
+${portfolio.plans.length?'<div class="plans-grid">'+cardsHtml+'</div>':'<div class="empty"><h2>No plans yet</h2><p>Start with any distance. You can add other plans whenever you like.</p><button class="btn dark" onclick="createPlan()">Build your first plan</button></div>'}
+<div class="note warn" style="margin-top:15px"><strong>Training safeguard:</strong> Activating two goals does not merge their programming automatically. The combined calendar de-duplicates its visual preview, but individual workouts and logs remain separate. AI training coordination is not connected yet; do not add both plans’ mileage together.</div>`;
+}
 
 let combinedWeekOffset=0;
-function combinedSessions(){let rows=[];for(const e of portfolio.plans){const p=e.plan;for(let wi=0;wi<p.weeks.length;wi++)for(let di=0;di<7;di++){let x=p.weeks[wi].sessions[di];if(x.miles<=0&&x.status==='planned')continue;let dt=dateAt(p.profile.startDate,wi,di);rows.push({entry:e,wi,di,s:x,key:monday(dt),date:`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`})}}return rows}
+function combinedSessions(){let rows=[];for(const e of portfolio.plans.filter(x=>activePlanIds().includes(x.id))){const p=e.plan;for(let wi=0;wi<p.weeks.length;wi++)for(let di=0;di<7;di++){let x=p.weeks[wi].sessions[di];if(x.miles<=0&&x.status==='planned')continue;let dt=dateAt(p.profile.startDate,wi,di);rows.push({entry:e,wi,di,s:x,key:monday(dt),date:`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`})}}return rows}
 function combinedMove(n){combinedWeekOffset=clamp(combinedWeekOffset+n,-104,104);renderCombined()}
 function openCombinedWorkout(id,wi,di){switchPlan(id);selectedWeek=wi;navigate('plan');openEdit(wi,di)}
 function logCombinedWorkout(id,wi,di){switchPlan(id);selectedWeek=wi;navigate('plan');openLog(wi,di)}
-function renderCombined(){let root=$('combinedContent');if(!root)return;let dt=new Date(monday());dt.setDate(dt.getDate()+combinedWeekOffset*7);let start=monday(dt);let rows=combinedSessions().filter(r=>r.key===start);let end=new Date(start+'T12:00:00');end.setDate(end.getDate()+6);
- let byDay=Array.from({length:7},(_,di)=>{let day=new Date(start+'T12:00:00');day.setDate(day.getDate()+di);let found=rows.filter(r=>r.date===`${day.getFullYear()}-${String(day.getMonth()+1).padStart(2,'0')}-${String(day.getDate()).padStart(2,'0')}`);return {day,found}});
- const overlap=byDay.filter(d=>d.found.filter(x=>x.s.miles>0&&x.s.status!=='missed').length>1);
- let planned=sum(rows.filter(r=>r.s.status!=='missed').map(r=>r.s.miles)),actual=sum(rows.filter(r=>r.s.status==='done').map(r=>r.s.actual??r.s.miles));
- root.innerHTML=`<div class="section-title"><div><div class="eyebrow">ONE VIEW / EVERY GOAL</div><h2>All plans calendar</h2><p class="subtle">${portfolio.plans.length} saved plan(s) · ${esc(start)} – ${esc(end.toLocaleDateString())}</p></div><div class="weekcontrols"><button class="btn light sm" onclick="combinedMove(-1)">← Previous</button><button class="btn light sm" onclick="combinedWeekOffset=0;renderCombined()">This week</button><button class="btn light sm" onclick="combinedMove(1)">Next →</button></div></div><div class="cards"><div class="card"><div class="muted">PLANNED ACROSS PLANS</div><div class="metric">${planned} mi</div></div><div class="card"><div class="muted">ACTUAL LOGGED</div><div class="metric">${actual} mi</div></div><div class="card"><div class="muted">OVERLAPPING DAYS</div><div class="metric">${overlap.length}</div></div></div><div class="note warn" style="margin:16px 0"><strong>Planning view only:</strong> the totals above add sessions from separate plans and can double-count training. Do not complete duplicate workouts just because they appear here. This is not yet an intelligently coordinated multi-race plan.</div><div class="weekdays">${byDay.map(d=>`<div class="day"><div class="dayname">${esc(d.day.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}))}</div>${d.found.length?d.found.map(x=>`<div style="padding:9px 0;border-bottom:1px solid #9b9b8b40"><div class="muted">${esc(x.entry.name)}</div><strong>${x.s.status==='done'?x.s.actual??x.s.miles:x.s.miles} mi</strong><div class="kind">${esc(x.s.type)}</div><div class="muted">${x.s.status==='done'?'✓ Logged':x.s.status==='missed'?'Missed':esc(x.s.pace||'By effort')}</div><button onclick="openCombinedWorkout('${x.entry.id}',${x.wi},${x.di})">Edit</button> ${x.s.miles>0?`<button onclick="logCombinedWorkout('${x.entry.id}',${x.wi},${x.di})">Log</button>`:''}</div>`).join(''):'<div class="muted">No run scheduled</div>'}${d.found.filter(x=>x.s.miles>0&&x.s.status!=='missed').length>1?'<div class="note warn">⚠ Multiple runs planned</div>':''}</div>`).join('')}</div>`;
+// Single-run calendar preview: show one chosen session per date. This does NOT
+// rewrite either source plan or provide AI-generated dual-race programming.
+function combinedPickDay(found){
+ if(!found.length)return null;
+ // Preserve a logged workout as the day's visible source of truth.
+ const logged=found.find(x=>x.s.status==='done');
+ if(logged)return logged;
+ // Never hide a race-date marker behind an ordinary training session.
+ const race=found.find(x=>x.s.type==='RACE DAY');
+ if(race)return race;
+ // Select the primary active plan for overlapping dates, including rest days.
+ const primary=found.find(x=>x.entry.id===portfolio.activeId);
+ return primary||found[0];
 }
+function renderCombined(){
+ const root=$('combinedContent');if(!root)return;
+ const dt=new Date(monday());dt.setDate(dt.getDate()+combinedWeekOffset*7);
+ const start=monday(dt),end=new Date(start+'T12:00:00');end.setDate(end.getDate()+6);
+ // Include rest days so a primary-plan rest day cannot silently become an extra run.
+ const weekEntries=[];
+ for(const entry of portfolio.plans.filter(x=>activePlanIds().includes(x.id))){
+  const plan=entry.plan;
+  for(let wi=0;wi<plan.weeks.length;wi++)for(let di=0;di<7;di++){
+   const day=dateAt(plan.profile.startDate,wi,di),date=isoDate(day);
+   if(monday(day)!==start)continue;
+   weekEntries.push({entry,wi,di,s:plan.weeks[wi].sessions[di],date});
+  }
+ }
+ const byDay=Array.from({length:7},(_,di)=>{
+  const day=new Date(start+'T12:00:00');day.setDate(day.getDate()+di);
+  const date=isoDate(day),found=weekEntries.filter(x=>x.date===date);
+  return {day,found,chosen:combinedPickDay(found)};
+ });
+ const chosen=byDay.map(d=>d.chosen).filter(Boolean);
+ const planned=sum(chosen.filter(x=>x.s.status!=='missed').map(x=>x.s.miles));
+ const actual=sum(chosen.filter(x=>x.s.status==='done').map(x=>x.s.actual??x.s.miles));
+ const overlaps=byDay.filter(d=>d.found.filter(x=>x.s.miles>0&&x.s.status!=='missed').length>1);
+ const otherLogged=byDay.filter(d=>d.found.filter(x=>x.s.status==='done').length>1);
+ root.innerHTML=`<div class="section-title"><div><div class="eyebrow">ONE CALENDAR / MULTIPLE GOALS</div><h2>Single-run schedule preview</h2><p class="subtle">${activePlanIds().length} active race goal(s) · ${esc(start)} – ${esc(end.toLocaleDateString())}</p></div><div class="weekcontrols"><button class="btn light sm" onclick="combinedMove(-1)">← Previous</button><button class="btn light sm" onclick="combinedWeekOffset=0;renderCombined()">This week</button><button class="btn light sm" onclick="combinedMove(1)">Next →</button></div></div>
+ <div class="cards"><div class="card"><div class="muted">SINGLE-SCHEDULE MILES</div><div class="metric">${planned} mi</div></div><div class="card"><div class="muted">LOGGED, DISPLAYED</div><div class="metric">${actual} mi</div></div><div class="card"><div class="muted">CONFLICT DAYS</div><div class="metric">${overlaps.length}</div></div></div>
+ <div class="note warn" style="margin:16px 0"><strong>Important:</strong> This is a de-duplicated preview, not an AI-coordinated training prescription. When plans conflict, it uses the currently viewed plan's session (or an existing completed run), rather than adding distances together. Rest days stay rest days. Other planned workouts remain in their original plans and are not automatically canceled. To train for both races, the workload and taper still need a coordinated review. ${otherLogged.length?'Multiple runs are already logged on some dates; review these records to avoid double counting.':''}</div>
+ <div class="weekdays">${byDay.map(d=>{
+ const x=d.chosen,other=d.found.filter(y=>y!==x&&y.s.miles>0),conflict=d.found.filter(y=>y.s.miles>0&&y.s.status!=='missed').length>1;
+ return `<div class="day ${x?.s.type==='Long run'?'long':''}"><div class="dayname">${esc(d.day.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}))}</div>${x?`<div class="muted">${esc(x.entry.name)}</div><strong>${x.s.type==='RACE DAY'?'🏁 Race day':(x.s.status==='done'?x.s.actual??x.s.miles:x.s.miles)+' mi'}</strong><div class="kind">${esc(x.s.type)}</div><div class="muted">${x.s.status==='done'?'✓ Logged':x.s.status==='missed'?'Missed':esc(x.s.pace||'By effort')}</div>${other.length?`<div class="muted" style="margin-top:9px">${other.length} other plan workout(s) not added</div>`:''}${conflict?'<div class="note warn" style="margin-top:8px">⚠ Overlap to review</div>':''}<button onclick="openCombinedWorkout('${x.entry.id}',${x.wi},${x.di})">Edit chosen run</button> ${x.s.miles>0||x.s.type==='RACE DAY'?`<button onclick="logCombinedWorkout('${x.entry.id}',${x.wi},${x.di})">Log</button>`:''}`:'<div class="muted" style="margin-top:13px">No scheduled run</div>'}</div>`;
+ }).join('')}</div>`;
+}
+
+function renderCalendarCombined(){const a=$('combinedContent'),b=$('calendarCombinedContent');if(!a||!b)return;renderCombined();b.innerHTML=a.innerHTML;}
+
 function numberOrNull(id){let value=$(id)?.value?.trim();return value===''||value==null?null:Number(value)}
 function runnerProfile(){return portfolio.runnerProfile||{}}
 function maxHeartRate(){const p=runnerProfile();if(p.maxHr)return {value:p.maxHr,source:'User-entered max HR'};if(p.age)return {value:Math.round(208-.7*p.age),source:'Age-based estimate (208 − 0.7 × age)'};return null}
@@ -391,7 +481,7 @@ function navigate(next){
  tab=aliases[next]||next;
  document.querySelectorAll('.tab').forEach(el=>el.classList.toggle('hidden',el.id!==tab));
  document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
- if(next==='settings')$('planBuilderPanel').open=true;
+ if(next==='settings')$('planBuilderPanel').classList.remove('hidden');
  if(next==='combined')$('allPlansPanel').open=true;
  render();
  const target=next==='settings'?'planBuilderPanel':next==='combined'?'allPlansPanel':next==='account'?'account':null;
@@ -475,7 +565,7 @@ function renderWeather(){if(!weatherSnapshot)return;const w=weatherSnapshot;
  weatherMessage(`<div class="eyebrow">${esc(w.label)} · CURRENT CONDITIONS</div><div class="trend-grid" style="margin-top:12px"><div class="trend-item"><span class="muted">TEMPERATURE</span><strong>${Math.round(w.temperature)}°F</strong></div><div class="trend-item"><span class="muted">FEELS LIKE</span><strong>${Math.round(w.feels)}°F</strong></div><div class="trend-item"><span class="muted">HUMIDITY</span><strong>${Math.round(w.humidity)}%</strong></div><div class="trend-item"><span class="muted">WIND</span><strong>${Math.round(w.wind)} mph</strong></div></div><div class="note warn" style="margin-top:12px"><strong>Training consideration:</strong> ${esc(weatherCaution(w))} No changes will be applied without your approval.</div><h3 style="margin-top:17px">7-day outlook</h3><div class="weather-days">${w.days.map(d=>`<div class="weather-day"><strong>${esc(new Date(d.date+'T12:00:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}))}</strong><div>${Math.round(d.hi)}° / ${Math.round(d.lo)}°F</div><small>Rain chance: ${Math.round(d.rain||0)}%</small></div>`).join('')}</div><p class="footnote">Forecast retrieved ${new Date(w.at).toLocaleString()}. Location coordinates are not stored in training records. Conditions change; always check updated forecasts.</p>`);
 }
 
-function render(){renderTrends();updateAccountUI();if(data)setProfile(data.profile);else setProfile(baseProfile());renderHome();renderPlan();renderProgress();renderPlans();renderCombined();renderRunnerProfile()}
+function render(){renderTrends();updateAccountUI();if(data)setProfile(data.profile);else setProfile(baseProfile());renderHome();renderPlan();renderProgress();renderPlans();renderCalendarCombined();renderRunnerProfile()}
 function displayPlanName(){
   if(!data)return '';
   const name=authUser?currentEntry()?.name:getPendingDraft()?.name;
@@ -732,9 +822,12 @@ if (entry) {
   });
 
   portfolio.activeId = id;
+  if(activePlanIds().length<MAX_ACTIVE_PLANS){
+    portfolio.activePlanIds=[...activePlanIds().filter(x=>x!==id),id];
+  }
 }
 
-selectedWeek = 0;save();navigate('home');toast('Your Mile Zero plan is ready.');if(ultras.has(p.goal)&&p.mileage<20)toast('Ultra goals need a strong base. Review your training readiness carefully.');};
+selectedWeek = 0;save();$('planBuilderPanel').classList.add('hidden');navigate('home');toast('Your Mile Zero plan is ready. Choose its active status in My Plans.');if(ultras.has(p.goal)&&p.mileage<20)toast('Ultra goals need a strong base. Review your training readiness carefully.');};
 $('exportBtn').onclick=exportCSV;$('backupBtn').onclick=backup;$('importBtn').onclick=()=>$('fileInput').click();$('fileInput').onchange=importBackup;
 if(load()){selectedWeek=todayIndex();render()}else{setProfile(baseProfile());render()}
 window.addEventListener('DOMContentLoaded',initAuth);
