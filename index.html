@@ -667,7 +667,7 @@ function reviewIntegratedTraining(){
  if(done.length<3)details+=' Limited training history: recommendations may be less reliable.';
  return {kind,reason,details,proposals,logged:recent.length};
 }
-unction openIntegratedTrainingReview() {
+function openIntegratedTrainingReview() {
   if (!requireAccount() || !isIntegratedCurrent()) return;
 
   integratedReviewDraft = reviewIntegratedTraining();
@@ -780,9 +780,6 @@ unction openIntegratedTrainingReview() {
   `);
 }
 
-
-
-Step 2 — Save your cha
 function approveIntegratedTrainingReview(){
  if(!isIntegratedCurrent()||!integratedReviewDraft)return;
  const picked=[...document.querySelectorAll('[data-integrated-review]:checked')].map(el=>integratedReviewDraft.proposals[Number(el.dataset.integratedReview)]).filter(Boolean);
