@@ -667,14 +667,122 @@ function reviewIntegratedTraining(){
  if(done.length<3)details+=' Limited training history: recommendations may be less reliable.';
  return {kind,reason,details,proposals,logged:recent.length};
 }
-function openIntegratedTrainingReview(){
- if(!requireAccount()||!isIntegratedCurrent())return;
- integratedReviewDraft=reviewIntegratedTraining();
- const r=integratedReviewDraft;
- if(r.error){toast(r.error);return;}
- const options=r.proposals.length?`<h3 style="margin-top:16px">Proposed upcoming changes</h3><p class="subtle">No workout changes unless you approve the selected suggestions. Logged runs, race days, and your manually edited workouts are excluded.</p>${r.proposals.map((x,i)=>`<label class="review-option"><input type="checkbox" data-integrated-review="${i}" checked><span><strong>${esc(x.date)} · ${esc(days[x.di])}</strong><small>${esc(x.oldType)} · ${x.old} mi → ${esc(x.newType)} · ${x.newMiles} mi</small></span></label>`).join('')}<div class="actions"><button class="btn dark" type="button" onclick="approveIntegratedTrainingReview()">Approve selected changes</button><button class="btn light" type="button" onclick="declineIntegratedTrainingReview()">Keep current schedule</button></div>`:`<div class="note" style="margin-top:14px">No workout changes suggested right now. Keep logging training so Mile Ø can compare multiple sessions over time.</div><div class="actions"><button class="btn light" onclick="closeModal()">Return to Calendar</button></div>`;
- modal(`<div class="eyebrow">MILE Ø / INTEGRATED TRAINING REVIEW</div><h2>${r.kind==='steady'?'Training log reviewed':'Your training may need an adjustment'}</h2><p>${esc(r.reason)}</p><p class="subtle">${esc(r.details)}</p><div class="note warn">Research-informed principles: consider completed training, perceived effort, symptoms, and recovery before changing load. The specific percentages are design heuristics, not scientifically validated prescriptions. Pain needs individualized attention.</div>${options}`);
+unction openIntegratedTrainingReview() {
+  if (!requireAccount() || !isIntegratedCurrent()) return;
+
+  integratedReviewDraft = reviewIntegratedTraining();
+  const r = integratedReviewDraft;
+
+  if (r.error) {
+    toast(r.error);
+    return;
+  }
+
+  const hasChanges = r.proposals.length > 0;
+
+  const heading = r.kind === 'steady'
+    ? "Looking good. Let's keep rolling."
+    : "Hey, let's check in.";
+
+  const introduction = r.kind === 'steady'
+    ? "I checked your recent training, and I don't see a strong reason to change your schedule right now. Let's keep building and see how your next few runs feel."
+    : "I looked over your recent training, and a few things caught my attention. I'm thinking we make some adjustments so you can keep working toward your goals without forcing things.";
+
+  const options = hasChanges
+    ? `
+      <h3 style="margin-top:18px">Here's what I'm thinking</h3>
+
+      <p class="subtle">
+        These are suggestions, not automatic changes.
+        You're always in control of your training.
+      </p>
+
+      ${r.proposals.map((x, i) => `
+        <label class="review-option">
+          <input
+            type="checkbox"
+            data-integrated-review="${i}"
+            checked
+          >
+          <span>
+            <strong>${esc(days[x.di])} · ${esc(x.date)}</strong>
+            <small>
+              ${esc(x.oldType)} · ${x.old} mi
+              →
+              ${esc(x.newType)} · ${x.newMiles} mi
+            </small>
+          </span>
+        </label>
+      `).join('')}
+
+      <p class="subtle">
+        Nothing changes unless you approve it.
+        Logged workouts, race days, and workouts you've
+        manually edited will stay as they are.
+      </p>
+
+      <div class="actions">
+        <button
+          class="btn dark"
+          type="button"
+          onclick="approveIntegratedTrainingReview()"
+        >
+          Make these changes
+        </button>
+
+        <button
+          class="btn light"
+          type="button"
+          onclick="declineIntegratedTrainingReview()"
+        >
+          Keep my schedule
+        </button>
+      </div>
+    `
+    : `
+      <div class="note" style="margin-top:14px">
+        No changes needed right now.
+        Keep logging your runs so I can get a better
+        picture of how your training is going.
+      </div>
+
+      <div class="actions">
+        <button
+          class="btn light"
+          type="button"
+          onclick="closeModal()"
+        >
+          Back to my training
+        </button>
+      </div>
+    `;
+
+  modal(`
+    <div class="eyebrow">MILE Ø / YOUR RUNNING BUDDY</div>
+
+    <h2>${heading}</h2>
+
+    <p>${introduction}</p>
+
+    <p>${esc(r.reason)}</p>
+
+    <p class="subtle">${esc(r.details)}</p>
+
+    <div class="note warn">
+      A quick heads-up: these suggestions are based on
+      general training principles and the information
+      you've logged so far. They're not a medical assessment.
+      If you're dealing with pain that's concerning or
+      sticking around, it's worth getting it checked out.
+    </div>
+
+    ${options}
+  `);
 }
+
+
+
+Step 2 — Save your cha
 function approveIntegratedTrainingReview(){
  if(!isIntegratedCurrent()||!integratedReviewDraft)return;
  const picked=[...document.querySelectorAll('[data-integrated-review]:checked')].map(el=>integratedReviewDraft.proposals[Number(el.dataset.integratedReview)]).filter(Boolean);
