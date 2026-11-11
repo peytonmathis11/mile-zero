@@ -178,7 +178,62 @@ function build(input){
    if(s.miles<old)s.integratedReason+=' Reduced '+old+' to '+s.miles+' miles within the one-plan mileage budget.';
    if(!s.miles){s.type='Rest / mobility';s.pace='';}
   }
-  const scheduled=sum(slots.map(s=>s.miles));
+  // Attach auditable, runner-specific rationale after mileage allocation. This is
+  // decision provenance, not proof that the proposed workout is optimal.
+  const proposedWeeklyMiles=sum(slots.map(s=>s.miles));
+  for(let di=0;di<slots.length;di++){
+   const sess=slots[di], day=dates[di];
+   const original=sources.map(e=>({
+    planId:e.id, name:e.name, goal:e.plan.profile.goal,
+    daysToRace:untilRace(e,day),
+    session:sourceAt(e,day)
+   }));
+   const available=original.filter(r=>r.session&&r.daysToRace>=0);
+   const notesForDay=[];
+   const evidenceIds=[];
+   const chosen=available.find(r=>r.planId===sess.sourcePlanId);
+   const other=available.find(r=>r.planId!==sess.sourcePlanId);
+   if(sess.type==='RACE DAY'){
+    notesForDay.push('A scheduled race takes the place of an ordinary training session on this date. Race mileage is not added to the training target.');
+    evidenceIds.push('taper');
+   }else if(sess.miles===0){
+    notesForDay.push('No run is proposed today. The engine retains a rest/recovery opportunity instead of stacking sessions from both race plans.');
+    evidenceIds.push('intensity');
+   }else{
+    const stimulus=hard(sess)?'quality / threshold-or-hill stimulus':long(sess)?'long-duration aerobic endurance':'primarily easy aerobic volume';
+    notesForDay.push('Training purpose: '+stimulus+'.');
+    if(chosen){
+     notesForDay.push('Selected source: '+chosen.name+' ('+chosen.session.type+', '+(Number(chosen.session.miles)||0)+' mi; '+chosen.daysToRace+' days before its race).');
+     if(other){
+      notesForDay.push('Alternative considered: '+other.name+' ('+other.session.type+', '+(Number(other.session.miles)||0)+' mi; '+other.daysToRace+' days before its race). This is not an instruction to run both.');
+     }
+    }
+    if(hard(sess)){
+     notesForDay.push('Quality sessions are limited to one per week in this prototype; a session is changed to easy running when it would stack with another hard day.');
+    }else{
+     notesForDay.push('The proposed effort is easy or controlled to preserve a large share of lower-intensity training.');
+    }
+    evidenceIds.push('intensity');
+   }
+   const sourceMiles=original.map(r=>(r.session?Number(r.session.miles)||0:0));
+   notesForDay.push('This week: '+proposedWeeklyMiles+' mi proposed; '+(Number(sourceTarget)||0).toFixed(1)+' mi in the nearer race plan and '+(Number(altTarget)||0).toFixed(1)+' mi in the later plan. The plans are not summed.');
+   if(evidence.avgWeeklyMiles!==null)notesForDay.push('Recent training: '+evidence.avgWeeklyMiles.toFixed(1)+' mi/week averaged across '+evidence.weeklyMiles.filter(v=>v>0).length+' logged week(s) in the past 28 days; this estimate excludes empty weeks and can overstate the true average when logs are incomplete.');
+   else notesForDay.push('No reliable recent weekly mileage from completed logs; the engine used reported comfortable mileage ('+base+' mi/week).');
+   if(evidence.strain==='pain')notesForDay.push('Recent pain was reported, so the draft reduces early workload and intensity; this is not a return-to-run clearance.');
+   else if(evidence.strain==='elevated')notesForDay.push('Recent high fatigue, RPE or HR/effort flags prompted a conservative initial workload.');
+   else if(evidence.recentRunCount<3)notesForDay.push('Few completed workouts are available; recovery and intensity assumptions have low confidence.');
+   else notesForDay.push('No heightened fatigue/pain flag was detected from available logs; missing reports are not evidence of full recovery.');
+   if(evidence.hasHeartRate)notesForDay.push('HR context: recorded max HR '+runnerProfile.maxHr+' bpm; '+(evidence.elevatedHr?'at least one recent high-HR/high-effort run flagged.':'no combined high-HR/high-effort flag found in the available 14-day logs.')+' HR by itself does not establish training zones or injury risk.');
+   else notesForDay.push('HR context: no measured maximum was entered; the engine did not use HR to decide this workout.');
+   const nextRace=original.filter(r=>r.daysToRace>=0).sort((a,b)=>a.daysToRace-b.daysToRace)[0];
+   if(nextRace&&nextRace.daysToRace<=21){notesForDay.push('Race timing: '+nextRace.name+' is '+nextRace.daysToRace+' day(s) away. Taper and race week deserve review; this prototype does not implement a fully individualized taper.');evidenceIds.push('taper');}
+   if(checkin&&day>firstRace&&day<finalRace)notesForDay.push('Race 1 check-in: '+(highRecoveryConcern?'higher recovery concern':moderateRecoveryConcern?'moderate recovery concern':'lower reported recovery concern')+'; changes to subsequent training were proposed for review.');
+   const finalVsSelected=chosen?Number(chosen.session.miles)||0:0;
+   if(finalVsSelected!==(Number(sess.miles)||0))notesForDay.push('Distance change: '+finalVsSelected+' mi in the chosen source → '+sess.miles+' mi proposed, to fit the shared weekly budget. Review workout structure manually when changing a quality session.');
+   notesForDay.push('The exact mileage, progression caps and source-selection weights are product heuristics, not numbers proven safe by the cited studies.');
+   sess.decisionRecord={version:1,date:day,originals:original.map(r=>({name:r.name,goal:r.goal,daysToRace:r.daysToRace,type:r.session?.type||'No session',miles:Number(r.session?.miles)||0})),proposed:{type:sess.type,miles:Number(sess.miles)||0},runnerContext:{recentRuns:evidence.recentRunCount,avgWeeklyMiles:evidence.avgWeeklyMiles,weeklyMiles:evidence.weeklyMiles,strain:evidence.strain,measuredMaxHr:runnerProfile.maxHr??null},weeklyBudget:{proposed:proposedWeeklyMiles,nearerSource:sourceTarget,laterSource:altTarget},reasons:notesForDay,evidenceIds:[...new Set(evidenceIds)],confidence:evidence.recentRunCount>=5&&!evidence.pain?'provisional':'limited data'};
+  }
+ const scheduled=sum(slots.map(s=>s.miles));
   // Progression anchor is not advanced during an intentionally low-volume recovery or taper week.
   if(!raceWeek&&!recoveryWeek&&scheduled>0)lastBuild=Math.max(lastBuild,scheduled);
   lastLoad=scheduled||Math.max(0,lastLoad*.65);
@@ -191,7 +246,7 @@ function build(input){
  if(!out.length)return {error:'No future training weeks found.'};
  const proposal={approved:false,signature,sourceIds:sources.map(e=>e.id),sourceNames:sources.map(e=>e.name),createdAt:new Date().toISOString(),conflicts:conflicts.length,races,notes,
   raceRecoverySummary:checkin?{raceDate:firstRace,outcome:checkin.outcome,readiness:checkin.ready,concern:highRecoveryConcern?'high':moderateRecoveryConcern?'moderate':'low',recoveryDays}:null,trainingAnalysis:evidence,trainingFactors:{age:runnerProfile.age??null,weightLb:runnerProfile.weightLb??null,measuredMaxHr:runnerProfile.maxHr??null,experience:sources.map(e=>e.plan.profile.experience),recentHistoryUsed:evidence.recentRunCount},
-  plan:{profile:{...JSON.parse(JSON.stringify(sources[0].plan.profile)),goal:'Integrated race goals',startDate:start,raceDate:finalRace,weeks},weeks:out,created:new Date().toISOString(),assessment:{issues:flags,notes},adjustmentHistory:[],engineVersion:'research-informed-engine-2.3'}};
+  plan:{profile:{...JSON.parse(JSON.stringify(sources[0].plan.profile)),goal:'Integrated race goals',startDate:start,raceDate:finalRace,weeks},weeks:out,created:new Date().toISOString(),assessment:{issues:flags,notes},adjustmentHistory:[],engineVersion:'research-informed-engine-2.4'}};
  return proposal;
 }
 global.MileZeroTrainingEngine={build,analyze};

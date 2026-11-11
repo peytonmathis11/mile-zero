@@ -1,1 +1,6 @@
-Mile Ø v2.3 Race 1 check-in and transition update. Upload index.html, training-engine.js, sw.js together. Keep config.js unchanged. Back up current code and export plans before installing. After Race 1, open Calendar > Integrated schedule > Check in after Race 1; answer recovery questions; review proposed updated schedule and approve. No paid AI calls. Not medically validated. Existing logged workouts are carried forward to matching calendar dates when reapproving. Test with a test account before live use.
+MILE Ø v2.4 — decision explanation upgrade
+
+Upload index.html, training-engine.js and sw.js together. Do NOT replace config.js.
+Back up your working files and export saved plans first.
+After upload, build a NEW integrated proposal to populate detailed decision records.
+Existing approved proposals are unchanged. The engine remains rules-based, NOT scientifically validated.
