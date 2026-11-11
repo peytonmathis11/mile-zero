@@ -1,13 +1,7 @@
-MILE Ø | Guest plan preview and signup-to-save
+MILE Ø — five-tab navigation update
 
-Upload index.html AND sw.js to GitHub repository root, replacing those two files. Do NOT delete config.js, setup.sql, or other files.
+Based on prior guest-preview version. Replace index.html and sw.js in GitHub repo root. Do not replace config.js, manifest.webmanifest, or icon.svg.
 
-BEFORE UPLOADING: Back up current working index.html and use Plan Settings > Download all plans backup.
+Tabs: Dashboard, My Plans (plan builder and combined calendar as expandable sections), Calendar, Progress (includes Trends), Profile (includes account and runner settings). Old internal navigate() calls route to the appropriate new tab.
 
-Guest users can generate a preview; it is temporarily cached in this browser for up to 48 hours for signup/email confirmation. It is NOT a permanent saved plan. Logs/edits require an account.
-
-Existing guest records are not deleted; after sign-in, the legacy Copy guest plan into account button remains available.
-
-Signup preview merges with an account portfolio after successful authentication, without replacing existing saved plans. Cloud persistence is confirmed separately; if the network fails, use Save to cloud now to retry.
-
-IMPORTANT: This was built from the previously uploaded repaired index.html; if you made additional changes after that (including dashboard changes), replacing the file may overwrite those changes. Keep a copy and compare before uploading.
+Before uploading: back up working index.html and all plans. After upload: sign in, check plans, preview and signup, calendar, trends, profile, and both expanded My Plans sections. Live account-flow testing was not performed.
