@@ -463,6 +463,43 @@ function integrationSignature(){
   created:e.plan.created,workouts:e.plan.weeks.map(w=>w.sessions.map(x=>[x.type,x.miles,x.pace,x.details,x.manual]))
  })));
 }
+// After Race 1, collect recovery feedback and propose an updated transition.
+function firstIntegrationRace(){
+ const sources=integrationSources().filter(e=>parseLocalDate(e.plan.profile.raceDate));
+ if(sources.length!==2)return null;
+ return [...sources].sort((a,b)=>a.plan.profile.raceDate.localeCompare(b.plan.profile.raceDate))[0];
+}
+function raceRecoveryFeedback(){
+ const first=firstIntegrationRace();
+ return first&&portfolio.raceRecoveryCheckins?.[first.id]?.raceDate===first.plan.profile.raceDate
+  ?portfolio.raceRecoveryCheckins[first.id]:null;
+}
+function raceCheckinStatus(){
+ const first=firstIntegrationRace();
+ if(!first)return null;
+ const date=first.plan.profile.raceDate;
+ const today=isoDate(new Date());
+ if(date>today)return null;
+ const after=integrationSources().find(e=>e.id!==first.id);
+ if(!after||after.plan.profile.raceDate<=date)return null;
+ return {first,after,date,feedback:raceRecoveryFeedback()};
+}
+function openRaceRecoveryCheckin(){
+ if(!requireAccount())return;
+ const state=raceCheckinStatus();
+ if(!state){toast('The Race 1 check-in is available after your first event.');return;}
+ const f=state.feedback||{};
+ modal(`<div class="eyebrow">MILE Ø / RACE-TO-RACE TRANSITION</div><h2>How did ${esc(state.first.name)} go?</h2><p class="subtle">Your answers help plan recovery before ${esc(state.after.name)}. This is a training review, not an injury assessment. Your original plans and completed runs stay unchanged.</p><form id="raceRecoveryForm"><div class="grid"><div class="field"><label for="rrCompleted">Race outcome</label><select id="rrCompleted"><option value="finished" ${f.outcome==='finished'?'selected':''}>Finished</option><option value="shortened" ${f.outcome==='shortened'?'selected':''}>Stopped early / shortened</option><option value="didnotstart" ${f.outcome==='didnotstart'?'selected':''}>Did not start</option></select></div><div class="field"><label for="rrRpe">Overall race effort (1–10)</label><select id="rrRpe">${Array.from({length:10},(_,i)=>`<option value="${i+1}" ${(f.effort??5)===i+1?'selected':''}>${i+1}</option>`).join('')}</select></div><div class="field"><label for="rrFatigue">Current fatigue</label><select id="rrFatigue"><option value="low" ${f.fatigue==='low'?'selected':''}>Low</option><option value="moderate" ${(!f.fatigue||f.fatigue==='moderate')?'selected':''}>Moderate</option><option value="high" ${f.fatigue==='high'?'selected':''}>High</option></select></div><div class="field"><label for="rrSoreness">Current muscle soreness</label><select id="rrSoreness"><option value="none" ${f.soreness==='none'?'selected':''}>None</option><option value="mild" ${(!f.soreness||f.soreness==='mild')?'selected':''}>Mild</option><option value="moderate" ${f.soreness==='moderate'?'selected':''}>Moderate</option><option value="severe" ${f.soreness==='severe'?'selected':''}>Severe</option></select></div><div class="field"><label for="rrSleep">Recent sleep / recovery</label><select id="rrSleep"><option value="good" ${f.sleep==='good'?'selected':''}>Good</option><option value="mixed" ${(!f.sleep||f.sleep==='mixed')?'selected':''}>Mixed</option><option value="poor" ${f.sleep==='poor'?'selected':''}>Poor</option></select></div><div class="field"><label for="rrReady">Ready to resume easy running?</label><select id="rrReady"><option value="yes" ${f.ready==='yes'?'selected':''}>Yes, I feel ready</option><option value="unsure" ${(!f.ready||f.ready==='unsure')?'selected':''}>Unsure</option><option value="no" ${f.ready==='no'?'selected':''}>Not yet</option></select></div></div><div class="field" style="margin-top:12px"><label><input id="rrPain" type="checkbox" ${f.pain?'checked':''}> Pain, injury concern, or unusual symptoms</label></div><div class="field" style="margin-top:12px"><label for="rrNotes">Optional notes</label><textarea id="rrNotes" maxlength="500" placeholder="How did the race feel? Any recovery concerns?">${esc(f.notes||'')}</textarea></div><div class="note warn" style="margin-top:12px">If you have concerning or persistent symptoms, seek appropriate medical evaluation. This system cannot clear you to run, and a plan change is not medical advice.</div><div class="actions"><button class="btn dark" type="submit">Save & review transition</button><button class="btn light" type="button" onclick="closeModal()">Cancel</button></div></form>`);
+ $('raceRecoveryForm').onsubmit=e=>{
+  e.preventDefault();
+  const state=raceCheckinStatus();if(!state)return;
+  const item={raceDate:state.date,sourceId:state.first.id,recordedAt:new Date().toISOString(),outcome:$('rrCompleted').value,effort:Number($('rrRpe').value),fatigue:$('rrFatigue').value,soreness:$('rrSoreness').value,sleep:$('rrSleep').value,ready:$('rrReady').value,pain:$('rrPain').checked,notes:$('rrNotes').value.trim().slice(0,500)};
+  if(!portfolio.raceRecoveryCheckins)portfolio.raceRecoveryCheckins={};
+  portfolio.raceRecoveryCheckins[state.first.id]=item;
+  save();closeModal();prepareIntegration();
+  toast('Check-in saved. Review the updated transition before approval.');
+ };
+}
 function isIntegratedCurrent(){
  const x=portfolio.integratedPlan;
  return !!(x&&x.approved&&x.signature===integrationSignature()&&integrationSources().length===2);
@@ -531,7 +568,7 @@ function buildIntegrationProposal(){
  const byDay=new Map();
  for(const r of originalLogs){const previous=byDay.get(r.date);if(!previous||r.miles>previous.miles)byDay.set(r.date,r);}
  const history=approvedLogs.map(r=>({...r,status:'done'})).concat([...byDay.values()]);
- return window.MileZeroTrainingEngine.build({sources,runnerProfile:runnerProfile(),history,signature:integrationSignature()});
+ return window.MileZeroTrainingEngine.build({sources,runnerProfile:runnerProfile(),history,signature:integrationSignature(),raceRecoveryCheckin:raceRecoveryFeedback()});
 }
 function prepareIntegration(){
  if(!requireAccount())return;
@@ -543,7 +580,16 @@ function prepareIntegration(){
 function approveIntegration(){
  if(!requireAccount()||!integrationDraft||integrationDraft.error)return;
  if(integrationDraft.signature!==integrationSignature()){toast('Your active plans changed. Build a fresh proposal.');return;}
- if(integrationHasLogs(portfolio.integratedPlan)&&!confirm('The previous integrated schedule contains logged workouts. Replacing it will delete those integrated logs. Download a backup first. Continue?'))return;
+ if(integrationHasLogs(portfolio.integratedPlan)&&!confirm('Your completed and missed integrated workout logs will be kept in the updated schedule where dates match. Future manual edits may need review. Continue?'))return;
+ const oldPlan=portfolio.integratedPlan?.plan;
+ if(oldPlan&&integrationHasLogs(portfolio.integratedPlan)){
+  const byDate=new Map();
+  oldPlan.weeks.forEach((w,wi)=>w.sessions.forEach((s,di)=>{if(s.status==='done'||s.status==='missed')byDate.set(isoDate(dateAt(oldPlan.profile.startDate,wi,di)),clone(s));}));
+  integrationDraft.plan.weeks.forEach((w,wi)=>w.sessions.forEach((s,di)=>{
+   const prior=byDate.get(isoDate(dateAt(integrationDraft.plan.profile.startDate,wi,di)));
+   if(prior){const explanation=s.integratedReason;Object.assign(s,prior);s.integratedReason=explanation+' Earlier workout log preserved after rebuilding the transition.';}
+  }));
+ }
  if(!confirm('Use this one-run-per-day schedule as your coordinated calendar? Your two original race plans will not be changed.'))return;
  portfolio.integratedPlan=clone({...integrationDraft,approved:true,approvedAt:new Date().toISOString()});
  integrationDraft=null;integrationWeek=0;portfolio.calendarMode='integrated';save();render();toast('Integrated schedule approved. You can switch back to separate plans anytime.');
@@ -612,9 +658,11 @@ function renderIntegration(){
  const wi=clamp(integrationWeek,0,x.plan.weeks.length-1);integrationWeek=wi;
  const w=x.plan.weeks[wi],dt=dateAt(x.plan.profile.startDate,wi,0);
  const planned=sum(w.sessions.map(s=>s.miles)),done=sum(w.sessions.filter(s=>s.status==='done').map(s=>s.actual??s.miles));
- root.innerHTML=`<div class="panel" style="border-left:5px solid #52785C;margin-bottom:16px"><div class="eyebrow">MILE Ø / MULTI-RACE COORDINATION</div><h2 style="margin:8px 0">${approved?'Your integrated training calendar':'Your combined training preview'}</h2><p class="subtle">${x.sourceNames.map(esc).join(' + ')} · ${x.plan.weeks.length} weeks · One workout per day · ${x.conflicts} overlapping session/race dates flagged</p><div class="note ${approved&&!current?'warn':''}">${approved?(valid?'<strong>Approved plan:</strong> Log and edit workouts here. Do not duplicate these runs in individual plans.':'<strong>Needs review:</strong> The original plans changed. Your previous integrated workouts and logs are preserved, but logging is paused until you build and approve a new schedule.'):'<strong>Preview:</strong> Review the workouts below before choosing this schedule. Your separate plans stay unchanged. This version uses evidence-informed planning rules, not live AI. It is a draft requiring your review.'}</div>
+ root.innerHTML=`<div class="panel" style="border-left:5px solid #52785C;margin-bottom:16px"><div class="eyebrow">MILE Ø / MULTI-RACE COORDINATION</div><h2 style="margin:8px 0">${approved?'Integrated '+x.sourceNames.map(esc).join(' / '):'Preview: '+x.sourceNames.map(esc).join(' / ')}</h2><p class="subtle">${x.sourceNames.map(esc).join(' + ')} · ${x.plan.weeks.length} weeks · One workout per day · ${x.conflicts} overlapping session/race dates flagged</p><div class="note ${approved&&!current?'warn':''}">${approved?(valid?'<strong>Approved plan:</strong> Log and edit workouts here. Do not duplicate these runs in individual plans.':'<strong>Needs review:</strong> The original plans changed. Your previous integrated workouts and logs are preserved, but logging is paused until you build and approve a new schedule.'):'<strong>Preview:</strong> Review the workouts below before choosing this schedule. Your separate plans stay unchanged. This version uses evidence-informed planning rules, not live AI. It is a draft requiring your review.'}</div>
+ ${raceCheckinStatus()?`<div class="note" style="margin-top:12px"><strong>Race 1 recovery check-in</strong><p class="subtle" style="margin:7px 0">${raceRecoveryFeedback()?`Last submitted for ${esc(raceCheckinStatus().first.name)}. You can update how you feel as recovery progresses.`:`You have passed ${esc(raceCheckinStatus().first.name)}. Tell Mile Ø how the race and recovery went before transitioning to ${esc(raceCheckinStatus().after.name)}.`}</p><button class="btn light sm" type="button" onclick="openRaceRecoveryCheckin()">${raceRecoveryFeedback()?'Update race recovery':'Check in after Race 1'} →</button></div>`:''}
  <div class="actions" style="margin-top:12px">${!approved?`<button class="btn dark" onclick="approveIntegration()">Approve & use this schedule</button><button class="btn light" onclick="discardIntegrationDraft()">Discard proposal</button>`:`<button class="btn light" onclick="prepareIntegration()">Rebuild proposal</button>`}<button class="btn light" onclick="navigate('plans')">My Plans</button></div>
 
+ ${x.raceRecoverySummary?`<div class="note" style="margin:10px 0"><strong>Race 1 recovery transition:</strong> ${esc(x.raceRecoverySummary.concern)} recovery concern · initial recovery window ${x.raceRecoverySummary.recoveryDays} days. Workout volume and intensity have been adjusted conservatively. Review each proposed session; recovery cannot be predicted from this questionnaire alone.</div>`:''}
  <p class="subtle">${runnerProfile().trainingCity?`Weather context city: ${esc(runnerProfile().trainingCity)} (current-condition reviews only; this schedule is not yet AI-adjusted).`:'Save a training city in Profile to enable current-weather context in feedback.'}</p><div class="section-title"><h3>Week ${wi+1} · ${esc(dateLabel(dt))}</h3><div class="weekcontrols"><button class="btn light sm" onclick="integrationMove(-1)" ${wi===0?'disabled':''}>← Previous</button><button class="btn light sm" onclick="integrationMove(1)" ${wi===x.plan.weeks.length-1?'disabled':''}>Next →</button></div></div><div class="cards"><div class="card"><div class="muted">THIS WEEK · PLANNED</div><div class="metric">${planned} mi</div></div><div class="card"><div class="muted">LOGGED</div><div class="metric">${done} mi</div></div><div class="card"><div class="muted">ACTIVE GOALS</div><div class="metric">2</div></div></div>
  <div class="weekdays">${w.sessions.map((sess,di)=>`<div class="day ${sess.type==='Long run'?'long':''}"><div class="dayname">${esc(days[di])} · ${esc(dateLabel(dateAt(x.plan.profile.startDate,wi,di)))}</div><strong>${sess.type==='RACE DAY'?'🏁 Race day':`${sess.status==='done'?sess.actual??sess.miles:sess.miles} mi`}</strong><div class="kind">${esc(sess.type)}</div><div class="muted">${esc(sess.sourceName)}</div>${integrationComparison(x,wi,di,sess)}<div class="tag">${sess.status==='done'?'✓ LOGGED':sess.status==='missed'?'MISSED':sess.manual?'EDITED':'PLANNED'}</div>${valid?`<div><button onclick="integratedEdit(${wi},${di})">Edit</button> ${sess.miles>0||sess.type==='RACE DAY'||sess.status==='done'?`<button onclick="integratedLog(${wi},${di})">Log</button>`:''}</div>`:''}</div>`).join('')}</div></div>`;
 }
@@ -794,7 +842,27 @@ function displayPlanName(){
   const name=authUser?currentEntry()?.name:getPendingDraft()?.name;
   return name||data.profile.goal+' training';
 }
-function renderHome(){if(!data){$('homeContent').innerHTML=`<section class="hero"><div class="eyebrow">MILE Ø / TRAINING FOR EVERY DISTANCE</div><h1>EARN YOUR<br>DISTANCE.</h1><p>Your first mile. Your furthest finish line. No one-size-fits-all plans. Build a training schedule around your life, then make every mile your own.</p><button class="btn" onclick="createPlan()">Build my training plan →</button></section><div class="cards"><div class="card"><div class="muted">BUILT FOR</div><div class="metric">Everyone</div></div><div class="card"><div class="muted">DISTANCES</div><div class="metric">1–100+</div></div><div class="card"><div class="muted">YOUR PLAN</div><div class="metric">Your rules</div></div></div><div class="panel"><h3>Start wherever you are.</h3><p class="subtle">Set your goal, schedule and current mileage. Track actual runs and get explainable training adjustments you can accept or decline. Preview without an account. Sign up to save and log your training.</p></div>`;return}
+function renderIntegratedDashboard(){
+ const integrated=portfolio.integratedPlan;
+ if(!isIntegratedCurrent()||calendarMode()!=='integrated'||!integrated?.plan)return false;
+ const p=integrated.plan,entries=integrationSources(),names=entries.map(e=>e.name),label='Integrated '+names.join(' / ');
+ const currentMonday=monday(),weeksFromStart=raceWeekCount(p.profile.startDate,currentMonday)-1;
+ const wi=clamp(weeksFromStart,0,p.weeks.length-1),w=p.weeks[wi];
+ if(!w)return false;
+ const completed=w.sessions.filter(x=>x.status==='done');
+ const logged=sum(completed.map(x=>x.actual??x.miles));
+ const scheduled=sum(w.sessions.map(x=>x.miles));
+ const today=isoDate(new Date());
+ let upcoming=null;
+ for(let k=wi;k<p.weeks.length&&!upcoming;k++)for(let d=0;d<7;d++){
+  const sess=p.weeks[k].sessions[d],when=isoDate(dateAt(p.profile.startDate,k,d));
+  if(when>=today&&sess.status==='planned'&&(sess.miles>0||sess.type==='RACE DAY')){upcoming={sess,wi:k,di:d,when};break;}
+ }
+ const raceDates=entries.map(e=>`${esc(e.name)}: ${esc(e.plan.profile.raceDate)}`).join(' · ');
+ $('homeContent').innerHTML=`<section class="hero"><div class="eyebrow">MILE Ø / YOUR INTEGRATED TRAINING</div><h1 style="overflow-wrap:anywhere">${esc(label)}</h1><p>One approved schedule for both goals. ${raceDates}</p><div class="actions"><button class="btn" onclick="navigate('plan')">Open integrated calendar →</button><button class="btn light" onclick="navigate('plans')">Manage race goals</button></div></section><div class="cards"><div class="card"><div class="muted">THIS WEEK / COMPLETED</div><div class="metric">${logged} mi</div></div><div class="card"><div class="muted">THIS WEEK / PLANNED</div><div class="metric">${scheduled} mi</div></div><div class="card"><div class="muted">TRAINING PHASE</div><div style="font-weight:800;margin-top:12px">${esc(w.phase)}</div></div></div><div class="panel"><h3>Next integrated workout</h3>${upcoming?`<p class="subtle">${esc(upcoming.when)}</p><div class="metric">${upcoming.sess.type==='RACE DAY'?'Race day':upcoming.sess.miles+' mi'}</div><p><strong>${esc(upcoming.sess.type)}</strong> · ${esc(upcoming.sess.details||'')}</p><div class="actions"><button class="btn dark" onclick="navigate('plan')">View integrated schedule</button><button class="btn light" onclick="integratedLog(${upcoming.wi},${upcoming.di})">Log workout</button></div>`:'<p class="subtle">No upcoming scheduled runs. Open your integrated calendar to review the block.</p>'}</div>`;
+ return true;
+}
+function renderHome(){if(renderIntegratedDashboard())return;if(!data){$('homeContent').innerHTML=`<section class="hero"><div class="eyebrow">MILE Ø / TRAINING FOR EVERY DISTANCE</div><h1>EARN YOUR<br>DISTANCE.</h1><p>Your first mile. Your furthest finish line. No one-size-fits-all plans. Build a training schedule around your life, then make every mile your own.</p><button class="btn" onclick="createPlan()">Build my training plan →</button></section><div class="cards"><div class="card"><div class="muted">BUILT FOR</div><div class="metric">Everyone</div></div><div class="card"><div class="muted">DISTANCES</div><div class="metric">1–100+</div></div><div class="card"><div class="muted">YOUR PLAN</div><div class="metric">Your rules</div></div></div><div class="panel"><h3>Start wherever you are.</h3><p class="subtle">Set your goal, schedule and current mileage. Track actual runs and get explainable training adjustments you can accept or decline. Preview without an account. Sign up to save and log your training.</p></div>`;return}
 let wi=todayIndex(),w=data.weeks[wi],stats=summaries(),done=w.sessions.filter(s=>s.status==='done'),actual=sum(done.map(s=>s.actual??s.miles)),scheduled=sum(w.sessions.map(s=>s.miles)),remaining=w.sessions.filter(s=>s.status==='planned'&&s.miles>0),next=remaining[0],nextDay=next?dateLabel(dateAt(data.profile.startDate,wi,w.sessions.indexOf(next))):'—';
 $('homeContent').innerHTML=`${isIntegratedCurrent()?'<div class="note" style="margin-bottom:15px"><strong>Two goals, one approved training calendar.</strong> Follow and log the integrated workouts in Calendar rather than doubling sessions from your individual race plans. <button class="btn dark sm" onclick="navigate(\'plan\')">Open integrated schedule</button></div>':''}${!authUser?'<div class="note warn" style="margin-bottom:15px"><strong>Preview only — not saved to an account.</strong> Create a free account or sign in to keep this plan and log runs. <button class="btn dark sm" onclick="navigate(\'account\')" style="margin-top:8px">Save my plan →</button></div>':''}<section class="hero"><div class="eyebrow">MILE Ø / EARN YOUR DISTANCE</div><h1>THE WORK<br>STARTS HERE.</h1><p>${esc(displayPlanName())} · ${esc(data.profile.goal)} goal · Week ${wi+1} of ${data.weeks.length}. ${data.profile.raceDate?esc(raceCountdown(data.profile.raceDate))+' · ':''}This is your plan, built around real life. Track the work and adapt the rest.</p><div class="actions"><button class="btn" onclick="navigate('plan')">View training week →</button><button class="btn light" onclick="showInsights()">Review training</button></div></section><div class="cards"><div class="card"><div class="muted">THIS WEEK / ACTUAL</div><div class="metric">${actual}<span style="font-size:13px"> mi</span></div><div class="muted">${scheduled} mi planned</div></div><div class="card"><div class="muted">RUNS LOGGED</div><div class="metric">${done.length}<span style="font-size:13px"> / ${w.sessions.filter(s=>s.miles>0).length}</span></div><div class="muted">This training week</div></div><div class="card"><div class="muted">TOTAL RECORDED</div><div class="metric">${stats.completed}<span style="font-size:13px"> mi</span></div><div class="muted">${stats.runs} completed runs</div></div></div><div class="two"><div class="panel"><h3>Next on your plan</h3>${next?`<div class="eyebrow">${nextDay} · ${next.day}</div><div class="metric">${next.miles} mi</div><p><strong>${esc(next.type)}</strong> · ${esc(next.pace?next.pace+'/mi':'By effort')}</p><p class="subtle">${esc(next.details)}</p><div class="actions"><button class="btn dark" onclick="openLog(${wi},${w.sessions.indexOf(next)})">Log workout</button><button class="btn light" onclick="openEdit(${wi},${w.sessions.indexOf(next)})">Change workout</button></div>`:'<p>All scheduled sessions are logged or missed for this week. Review your progress or choose another week.</p>'}</div><div class="panel"><h3>Your plan, your call</h3><p class="subtle">Change distances, paces, workout types, or running days at any time. Log how a run felt to get tailored recommendations.</p><div class="actions"><button class="btn dark" onclick="showInsights()">Analyze my progress</button><button class="btn light" onclick="navigate('settings')">Plan settings</button><button class="btn light" onclick="navigate('plans')">My plans</button></div></div></div>`}
 function renderPlan(){if(data&&$('formWarning')){$('formWarning').innerHTML=(data.assessment?.issues||[]).map(x=>'<div class="note warn" style="margin-top:8px">'+esc(x)+'</div>').join('')}if(!data){$('planContent').innerHTML='<div class="empty"><div class="intro-icon">Ø</div><h2>No plan yet</h2><p>Build your first personalized schedule to see your training calendar here.</p><button class="btn dark" onclick="navigate(\'settings\')">Build my plan</button></div>';return}selectedWeek=clamp(selectedWeek,0,data.weeks.length-1);let w=data.weeks[selectedWeek],mi=sum(w.sessions.map(s=>s.miles)),logged=sum(w.sessions.filter(s=>s.status==='done').map(s=>s.actual??s.miles)),pct=mi?clamp(logged/mi*100,0,100):0;
