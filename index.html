@@ -1,6 +1,75 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#18221C"><meta name="description" content="Mile Zero: adaptive running plans for every distance."><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg" type="image/svg+xml"><title>MILE Ø — Earn Your Distance</title>
-<style>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+/* MILE ZERO — BRAND TYPOGRAPHY */
+
+/* Main app text */
+body,
+button,
+input,
+select,
+textarea {
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+
+/* Logo */
+.brand {
+  font-family: 'Anton', Impact, sans-serif;
+  font-size: 34px;
+  font-weight: 400;
+  letter-spacing: 1px;
+  line-height: 1.2;
+}
+
+/* Slashed zero */
+.brand em {
+  font-family: 'Anton', Impact, sans-serif;
+  font-style: normal;
+  color: #B9A47B;
+}
+
+/* Main welcome headline */
+.hero h1 {
+  font-family: 'Anton', Impact, sans-serif;
+  font-size: clamp(42px, 7vw, 76px);
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  line-height: 1.08;
+  text-transform: uppercase;
+}
+
+/* Section headings */
+h2, h3 {
+  font-family: 'Anton', Impact, sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.3px;
+}
+
+/* Big numbers on the dashboard */
+.metric {
+  font-family: 'Anton', Impact, sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.2px;
+}
+
+/* Buttons and navigation */
+.nav button,
+.btn {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+/* Small labels */
+.eyebrow,
+.topright {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+
+ <style>
 :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#242922;background:#f1eee7}*{box-sizing:border-box}body{margin:0}button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{opacity:.4;cursor:not-allowed}a{color:inherit}.app{max-width:1120px;margin:0 auto;padding:22px 22px 90px}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:26px}.brand{font-weight:950;font-size:25px;letter-spacing:-1.5px}.brand em{font-style:normal;color:#a9ba81}.topright{font-size:11px;letter-spacing:1px;text-transform:uppercase;font-weight:800;color:#68705f}.nav{display:flex;gap:6px;background:#e6e2d9;padding:5px;border-radius:14px;margin-bottom:20px;overflow-x:auto}.nav button{border:0;border-radius:10px;padding:11px 17px;background:transparent;font-size:13px;font-weight:800;color:#66705c;white-space:nowrap}.nav button.active{background:#253027;color:white}.hero{background:#253027;color:#f8f4e9;border-radius:23px;padding:28px;position:relative;overflow:hidden}.hero:after{content:'Ø';position:absolute;right:-5px;bottom:-75px;font-size:250px;font-weight:950;color:#ffffff08;pointer-events:none}.eyebrow{color:#a7b78b;text-transform:uppercase;font-weight:850;font-size:11px;letter-spacing:2px}.hero h1{font-size:clamp(34px,5.6vw,64px);line-height:1.01;letter-spacing:-2px;margin:13px 0}.hero p{color:#d3d9cd;max-width:560px;line-height:1.6}.hero .btn{position:relative;z-index:1}.btn{background:#b6c993;color:#1e2b20;border:0;border-radius:11px;padding:12px 17px;font-weight:850;font-size:13px}.btn.dark{background:#27352b;color:white}.btn.light{background:#ebe9df;color:#334030}.btn.outline{background:transparent;border:1px solid #c9cabe}.btn.danger{background:#f2dbd2;color:#8c3828}.btn.sm{padding:8px 11px;font-size:12px}.actions{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 0}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0}.card,.panel{background:#fffdf8;border:1px solid #e4e0d5;border-radius:17px;padding:19px}.muted{color:#73786e;font-size:12px;line-height:1.45}.metric{font-size:clamp(22px,3vw,34px);font-weight:920;letter-spacing:-1px;margin:7px 0}.section-title{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:24px 0 12px}h2{font-size:23px;letter-spacing:-.65px;margin:0}h3{font-size:17px;margin:0 0 10px}p{line-height:1.55}.two{display:grid;grid-template-columns:1.15fr .85fr;gap:14px}.list{display:flex;flex-direction:column;gap:9px}.session{border:1px solid #e2e2d7;border-radius:13px;padding:14px;display:flex;align-items:center;justify-content:space-between;gap:10px}.session .name{font-weight:850}.session.done{border-color:#c0d0a6;background:#f3f7ee}.session.missed{border-color:#dec8b5;background:#faf3eb}.session .sub{font-size:12px;color:#737b71;margin-top:3px}.session .buttons{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.weekcontrols{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.weekcontrols select{min-width:110px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.field{display:flex;flex-direction:column;gap:6px}.field label{font-size:12px;font-weight:850}.field input,.field select,.field textarea,select{border:1px solid #d8d8cc;background:#fffefa;border-radius:9px;padding:11px;min-height:43px;color:#243124;width:100%}.field textarea{min-height:76px;resize:vertical}.field input:focus,.field textarea:focus,.field select:focus{outline:2px solid #93a97a}.note{background:#f0f3e7;border:1px solid #dbe4cc;color:#3f5341;border-radius:12px;padding:13px;font-size:13px;line-height:1.5}.warn{background:#fbf2e8;border-color:#f0d6bd;color:#754b2a}.error{background:#f9e9e5;border-color:#e6b5a8;color:#8b3528}.bar{height:10px;background:#e5e6de;border-radius:99px;overflow:hidden;margin:10px 0}.bar>div{height:100%;background:#82966b;transition:width .2s}.weekdays{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}.day{min-width:0;background:#fffdf8;border:1px solid #e0e1d8;border-radius:14px;padding:11px;min-height:154px}.day.long{background:#edf2e4;border-color:#c7d6b9}.day .dayname{font-size:11px;letter-spacing:.7px;font-weight:900;color:#798273;text-transform:uppercase}.day strong{display:block;font-size:22px;margin:12px 0 5px}.day .kind{font-weight:800;font-size:12px;min-height:29px}.day .tag{display:inline-block;margin-top:10px;font-size:10px;color:#536447;font-weight:800}.day button{background:none;padding:0;border:0;text-decoration:underline;text-align:left;margin-top:8px;color:#526847;font-weight:800;font-size:11px}.insight{border-left:4px solid #93a87a;background:#f3f5ed;padding:15px 18px;border-radius:0 12px 12px 0}.insight strong{display:block;margin-bottom:6px}.insight p{font-size:13px;margin:6px 0}.pill{display:inline-block;border:1px solid #d4d8c9;border-radius:99px;padding:6px 10px;font-size:11px;font-weight:850;color:#526448}.empty{text-align:center;padding:42px 20px}.empty h2{margin:7px 0}.empty p{max-width:500px;margin:10px auto 20px;color:#6e786a}.hidden{display:none!important}.footer{margin-top:32px;text-align:center;color:#878a7d;font-size:11px}.subtle{font-size:12px;color:#727b70}.modal-backdrop{position:fixed;inset:0;background:#101810bb;display:grid;place-items:center;z-index:10;padding:15px;overflow-y:auto}.modal{width:min(100%,530px);max-height:92vh;overflow-y:auto;background:#fffdf8;border-radius:19px;padding:24px;box-shadow:0 24px 80px #0004}.modal h2{margin-bottom:16px}.review-option{display:flex;align-items:flex-start;gap:12px;border:1px solid #e0dfd3;background:#f7f7f0;border-radius:12px;padding:12px;margin:8px 0}.review-option input{margin-top:5px;accent-color:#526746;width:18px;height:18px;flex:none}.review-option strong{font-size:14px}.review-option small{display:block;color:#68705f;margin-top:4px;line-height:1.45}.review-stats{display:flex;gap:9px;flex-wrap:wrap;margin:13px 0}.review-stats span{background:#e9eee3;border-radius:20px;padding:7px 10px;font-size:12px;font-weight:700}.review-history{border-bottom:1px solid #e7e4d9;padding:12px 0}.review-history p{margin:4px 0;color:#707769;font-size:12px}.footnote{font-size:12px;color:#5f6c58;line-height:1.5}.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#27352b;color:white;padding:11px 17px;border-radius:10px;font-size:13px;z-index:12;box-shadow:0 8px 22px #0003;max-width:92vw}.summary-list{display:flex;flex-direction:column;gap:8px}.summary-list div{display:flex;align-items:center;justify-content:space-between;gap:9px;font-size:13px;border-bottom:1px solid #eae9e0;padding-bottom:8px}.summary-list strong{white-space:nowrap}.toplink{font-size:12px;color:#526746;text-decoration:underline;border:0;background:none}.intro-icon{width:50px;height:50px;background:#b6c993;display:grid;place-items:center;font-weight:950;border-radius:13px;font-size:24px;margin-bottom:16px}@media(max-width:850px){.weekdays{grid-template-columns:repeat(2,1fr)}.day{min-height:128px}.two{grid-template-columns:1fr}}@media(max-width:540px){.app{padding:14px 12px 70px}.top{margin-bottom:15px}.topright{font-size:9px}.nav button{padding:10px 12px;font-size:12px}.hero{padding:24px}.cards{gap:7px}.card{padding:12px}.metric{font-size:21px}.muted{font-size:11px}.panel{padding:15px}.grid{grid-template-columns:1fr}.weekdays{grid-template-columns:1fr 1fr}.session{align-items:flex-start;flex-direction:column}.session .buttons{justify-content:flex-start}.modal{padding:18px}}
 
 /* Mile Ø v0.8 — pine, khaki, stone, charcoal; all training logic unchanged */
