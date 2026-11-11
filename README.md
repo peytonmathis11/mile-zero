@@ -1,21 +1,24 @@
-# MILE Ø v0.8 — Trends & Weather (prototype)
+# MILE Ø v0.9 — race-specific plan engine (prototype)
 
-## Before you upload
-1. In your existing app, use **Plan Settings → Download all plans backup**. Keep the backup.
-2. Unzip this ZIP. Upload `index.html`, `sw.js`, `icon.svg`, and `manifest.webmanifest` to the **root** of your existing GitHub repository, replacing matching files. Commit changes.
-3. **Keep your existing `config.js` unchanged.** Do not upload your Supabase secret/service-role key. No additional SQL is required.
-4. Refresh the site in a private window if caching causes a stale version.
+## Installation
 
-## New features
-- **Trends & Weather** tab: trends based on completed workouts, pace, average HR, effort and mileage, with a choice of active-plan or all-plans analysis.
-- More cautious cross-plan duplicate handling: only exact same-day logged runs with matching distance, pace **and** HR are deduplicated in the all-plans view. Any others might double-count; check your logs.
-- Optional **Use my location once** browser permission flow, or search a city instead. Coordinates are rounded to ~0.1 degree before weather request, are not saved or synced to Supabase, and are discarded when you close the tab. A weather provider does receive coordinates when you fetch local weather.
-- Current temperature, feels-like temperature, humidity, wind, seven-day high/low temperatures, and rain probability from Open-Meteo.
-- Weather caveats appear in **Review training** if you have recently requested a forecast. Weather does not automatically rewrite workouts.
+1. In the current app, download a **full backup** of every plan before updating.
+2. Unzip this package. Upload `index.html`, `sw.js`, `manifest.webmanifest`, and `icon.svg` to the ROOT of your GitHub Pages repository, replacing existing files.
+3. **Keep your existing `config.js`.** Do not upload secrets or your database password; no new SQL is needed.
+4. Commit, check GitHub Actions deployment, and reopen the app. If the old version persists, clear the website's cached data only after backing up.
+5. In My Plans, choose **New plan** and fill in the assessment questions. Existing plans remain intact unless deliberately regenerated.
+
+## What changed
+
+* Goal-specific planning for first-mile, 5K, 10K, half, full, ultras, and timed ultras.
+* New assessment: 30-day longest run, training consistency, race surface.
+* Foundation, build, recovery, race-specific, and taper phases; different taper lengths by event.
+* Controlled workouts for suitable runners; no automatic high-intensity training for beginners or runners returning after a break.
+* Conservative long-run readiness bounds and explicit readiness warnings for ambitious targets.
+* Preserves portfolios, runner profiles, workout logs, runner approval, Trends, and weather preferences from v0.8.1.
 
 ## Important limitations
-- This is **rule-based adaptation**, not a connected generative AI model. Training reviews still focus on the selected active plan rather than a truly combined workload. The all-plans display is analytics, not a consolidated training prescription.
-- Weather is a forecast, not actual conditions from historical runs. Humidity and other measures alone cannot establish physiological risk or calculate individual safe pacing. The model does not diagnose injuries.
-- Browser location permission requires HTTPS and an explicit click. Access can be denied. This version does not track runs via GPS or connect to Apple Health, Health Connect, Garmin or Strava.
-- Open-Meteo's free API is for **non-commercial prototypes**; subscriptions or advertising would require commercial licensing, alternative licensed providers, and attribution compliance. See https://open-meteo.com/en/terms and https://open-meteo.com/en/docs.
-- Need to independently test browser behavior, authentication, persistence and API availability before treating as production-ready.
+
+This is a **rules-based planning prototype**, not a connected generative AI, medical advice, or a validated coaching product. It cannot guarantee race readiness or prevent injury. Weather does not yet dynamically change generated workouts; it adds optional context to training reviews. Multi-plan calendar is still a viewing tool, not a coordinated dual-race prescription. For beginner runners with no current mileage, numeric distance-based plans are especially crude and should be replaced with timed run/walk intervals in a later update.
+
+Do not launch this commercially as a verified training coach without testing plans across runner profiles and obtaining qualified sports-science/endurance-coach review.
