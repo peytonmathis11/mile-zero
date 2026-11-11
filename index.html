@@ -61,7 +61,7 @@ body{background:linear-gradient(180deg,#E6E2D8 0%,#F0EEE8 55%,#E5E0D5 100%);colo
  <div class="actions"><button type="button" id="trendThis" class="btn dark sm" onclick="setTrendScope('active')">Active plan</button><button type="button" id="trendAll" class="btn light sm" onclick="setTrendScope('all')">All plans</button></div><div id="trendsContent" style="margin-top:16px"></div></div>
 
 </section>
-<section id="settings" class="tab hidden"><div class="section-title"><h2>Build a race-specific plan</h2><button class="btn light sm" type="button" onclick="navigate('plans')">← My plans</button></div><div class="panel"><p class="subtle">Weather is optional training context, configured under Runner Profile. Weather adds context to reviews. Plans are grounded in your training history, not a single weather forecast. </p><p class="subtle">Version 0.9 uses different workout structures for each race distance, your base mileage, recent long run, consistency, and available days. These are coaching heuristics, not a validated individual prescription. Update your preferences and regenerate your schedule when you want. Regenerating changes only the selected plan. Other saved plans are not changed. Export a backup first.</p><form id="builder"><div class="grid"><div class="field"><label for="goal">What are you training for?</label><select id="goal"><option>First mile / run-walk</option><option>5K</option><option>10K</option><option>Half Marathon</option><option>Marathon</option><option>50K</option><option>50 Mile</option><option>100K</option><option>100 Mile</option><option>6 Hour</option><option>12 Hour</option><option>24 Hour</option></select></div><div class="field"><label for="experience">Experience level</label><select id="experience"><option value="new">New / returning runner</option><option value="steady">Consistent runner</option><option value="advanced">Experienced / high volume</option></select></div><div class="field"><label for="mileage">Current comfortable weekly miles</label><input type="number" id="mileage" min="0" max="180" step="0.5" required></div><div class="field"><label for="days">Running days per week</label><select id="days"><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option></select></div><div class="field"><label for="weeks">Plan length (weeks)</label><input type="number" min="4" max="52" id="weeks" required></div><div class="field"><label for="longday">Preferred long-run day</label><select id="longday"><option value="0">Monday</option><option value="1">Tuesday</option><option value="2">Wednesday</option><option value="3">Thursday</option><option value="4">Friday</option><option value="5">Saturday</option><option value="6">Sunday</option></select></div><div class="field"><label for="terrain">Terrain</label><select id="terrain"><option value="road">Road / treadmill</option><option value="trail">Trails / mixed</option><option value="flat">Flat loop / timed ultra</option></select></div><div class="field"><label for="focus">Main priority</label><select id="focus"><option value="finish">Build endurance / finish</option><option value="speed">Improve speed / performance</option><option value="durability">Consistency and durability</option></select></div><div class="field"><label for="recentLong">Longest comfortable run in the last 30 days (miles)</label><input id="recentLong" type="number" min="0" max="100" step="0.5" placeholder="e.g. 8; optional"></div><div class="field"><label for="consistency">Recent training consistency</label><select id="consistency"><option value="steady">Regular for 6+ weeks</option><option value="variable">Some missed weeks / variable training</option><option value="returning">Returning after a break</option></select></div><div class="field"><label for="raceSurface">Race conditions</label><select id="raceSurface"><option value="road">Mostly road / smooth</option><option value="trail">Trails / technical</option><option value="hilly">Significant hills</option><option value="loop">Flat loop / timed</option></select></div><div class="field"><label for="pace">Default easy pace (min per mile)</label><input id="pace" placeholder="10:30" pattern="[0-9]{1,2}:[0-5][0-9]"></div><div class="field"><label for="startDate">Plan start (Monday)</label><input id="startDate" type="date" required></div></div><div class="actions"><button class="btn dark" type="submit">Generate my plan</button><button class="btn light" type="button" id="exportBtn">Export training CSV</button><button class="btn light" type="button" id="backupBtn">Download all plans backup</button><button class="btn light" type="button" id="importBtn">Import backup</button></div><p class="subtle">Training saves on your device. Once you connect an account, it can also sync to your private Supabase cloud record. Always keep backups.</p><div id="formWarning"></div></form></div><div class="section-title"><h2>Runner-approved training intelligence</h2></div><div class="panel"><p>After you log training, Mile Zero compares planned and actual mileage, how hard sessions felt, recent missed workouts, and fatigue or pain reports. It proposes changes to specific upcoming runs, explains why, and asks you to approve each workout individually. Nothing changes automatically. Declines and approvals are recorded, and approvals can be undone if the sessions have not been modified or logged.</p><div class="note">This version uses a transparent adaptive rules engine, <strong>not a live AI language model</strong>. It does not diagnose injuries or guarantee an appropriate training load. Real model-based AI, wearables, and account syncing require additional infrastructure and may have ongoing costs.</div></div></section>
+<section id="settings" class="tab hidden"><div class="section-title"><h2>Build a race-specific plan</h2><button class="btn light sm" type="button" onclick="navigate('plans')">← My plans</button></div><div class="panel"><p class="subtle">Weather is optional training context, configured under Runner Profile. Weather adds context to reviews. Plans are grounded in your training history, not a single weather forecast. </p><p class="subtle">Version 1.0 begins at your current comfortable mileage, then progressively builds toward your race with easier recovery weeks, rest days, and a race-specific taper. Your starting mileage is not a lifetime ceiling. These are coaching heuristics, not a validated individual prescription. Update your preferences and regenerate your schedule when you want. Regenerating changes only the selected plan. Other saved plans are not changed. Export a backup first.</p><form id="builder"><div class="grid"><div class="field"><label for="goal">What are you training for?</label><select id="goal"><option>First mile / run-walk</option><option>5K</option><option>10K</option><option>Half Marathon</option><option>Marathon</option><option>50K</option><option>50 Mile</option><option>100K</option><option>100 Mile</option><option>6 Hour</option><option>12 Hour</option><option>24 Hour</option></select></div><div class="field"><label for="experience">Experience level</label><select id="experience"><option value="new">New / returning runner</option><option value="steady">Consistent runner</option><option value="advanced">Experienced / high volume</option></select></div><div class="field"><label for="mileage">Current comfortable weekly miles (starting point, NOT a cap)</label><input type="number" id="mileage" min="0" max="180" step="0.5" required></div><div class="field"><label for="days">Running days per week</label><select id="days"><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option></select><small class="muted">If you select 7, the draft still includes one recovery/rest day.</small></div><div class="field"><label for="weeks">Plan length (weeks)</label><input type="number" min="4" max="52" id="weeks" required></div><div class="field"><label for="longday">Preferred long-run day</label><select id="longday"><option value="0">Monday</option><option value="1">Tuesday</option><option value="2">Wednesday</option><option value="3">Thursday</option><option value="4">Friday</option><option value="5">Saturday</option><option value="6">Sunday</option></select></div><div class="field"><label for="terrain">Terrain</label><select id="terrain"><option value="road">Road / treadmill</option><option value="trail">Trails / mixed</option><option value="flat">Flat loop / timed ultra</option></select></div><div class="field"><label for="focus">Main priority</label><select id="focus"><option value="finish">Build endurance / finish</option><option value="speed">Improve speed / performance</option><option value="durability">Consistency and durability</option></select></div><div class="field"><label for="recentLong">Longest comfortable run in the last 30 days (miles)</label><input id="recentLong" type="number" min="0" max="100" step="0.5" placeholder="e.g. 8; optional"></div><div class="field"><label for="consistency">Recent training consistency</label><select id="consistency"><option value="steady">Regular for 6+ weeks</option><option value="variable">Some missed weeks / variable training</option><option value="returning">Returning after a break</option></select></div><div class="field"><label for="raceSurface">Race conditions</label><select id="raceSurface"><option value="road">Mostly road / smooth</option><option value="trail">Trails / technical</option><option value="hilly">Significant hills</option><option value="loop">Flat loop / timed</option></select></div><div class="field"><label for="pace">Default easy pace (min per mile)</label><input id="pace" placeholder="10:30" pattern="[0-9]{1,2}:[0-5][0-9]"></div><div class="field"><label for="startDate">Plan start (Monday)</label><input id="startDate" type="date" required></div></div><div class="actions"><button class="btn dark" type="submit">Generate my plan</button><button class="btn light" type="button" id="exportBtn">Export training CSV</button><button class="btn light" type="button" id="backupBtn">Download all plans backup</button><button class="btn light" type="button" id="importBtn">Import backup</button></div><p class="subtle">Training saves on your device. Once you connect an account, it can also sync to your private Supabase cloud record. Always keep backups.</p><div id="formWarning"></div></form></div><div class="section-title"><h2>Runner-approved training intelligence</h2></div><div class="panel"><p>After you log training, Mile Zero compares planned and actual mileage, how hard sessions felt, recent missed workouts, and fatigue or pain reports. It proposes changes to specific upcoming runs, explains why, and asks you to approve each workout individually. Nothing changes automatically. Declines and approvals are recorded, and approvals can be undone if the sessions have not been modified or logged.</p><div class="note">This version uses a transparent adaptive rules engine, <strong>not a live AI language model</strong>. It does not diagnose injuries or guarantee an appropriate training load. Real model-based AI, wearables, and account syncing require additional infrastructure and may have ongoing costs.</div></div></section>
 <section id="runner" class="tab hidden"><div class="section-title"><div><div class="eyebrow">MILE Ø / PERSONAL SETTINGS</div><h2>Runner profile & heart-rate zones</h2></div></div>
 <div class="panel"><p class="subtle">Optional details help estimate training zones and energy use. You can leave these blank, and edit them at any time. These estimates are not medical assessments.</p>
 <form id="runnerForm"><div class="grid">
@@ -154,67 +154,98 @@ function trainingAssessment(p){
  notes.push('Training rules are generalized heuristics, not proof of safety or a guaranteed finish.');
  return {issues,notes,blueprint:b};
 }
+// v1.0: prototype progression heuristics, NOT a validated training prescription.
+const halfMiles=n=>Math.max(0,Math.round((Number(n)||0)*2)/2);
+function distributeHalfMiles(total, indexes, weights){
+  // Largest-remainder distribution in 0.5 mile units; sum always equals requested target.
+  const units=Math.max(0,Math.round(total*2)), sw=weights.reduce((a,b)=>a+b,0);
+  if(!indexes.length||sw<=0)return {};
+  const raw=weights.map(w=>units*w/sw), assigned=raw.map(Math.floor), remaining=units-assigned.reduce((a,b)=>a+b,0);
+  const order=raw.map((x,i)=>({i,frac:x-assigned[i]})).sort((a,b)=>b.frac-a.frac||a.i-b.i);
+  for(let k=0;k<remaining;k++)assigned[order[k].i]++;
+  return Object.fromEntries(indexes.map((day,i)=>[day,assigned[i]/2]));
+}
 function generate(p){
  const assessment=trainingAssessment(p),b=assessment.blueprint,ultra=['ultra','timed'].includes(b.family);
  const base=Math.max(0,Number(p.mileage)||0),longRecent=p.recentLong===''?null:Math.max(0,Number(p.recentLong));
  const returning=p.consistency==='returning',variable=p.consistency==='variable';
  const beginner=p.experience==='new'||base<10;
  const rate=returning?.025:variable?.035:beginner?.04:p.experience==='advanced'?.065:.05;
- const cap=base*(returning?1.25:variable?1.45:beginner?1.55:p.experience==='advanced'?2.0:1.7);
- const taper=Math.min(b.taper,Math.max(0,p.weeks-3));
- let out=[],last=base*(returning?.75:variable?.9:1),peak=last;
+ const taper=Math.min(b.taper,Math.max(0,p.weeks-3)),taperStart=p.weeks-taper;
+ // Anchor progressive weeks to the last BUILD week, not to a reduced recovery week.
+ // No fixed multiplier ceiling: achievable growth emerges from available weeks and a conservative weekly rate.
+ let out=[],buildAnchor=base*(returning?.75:variable?.9:1),peak=buildAnchor;
+ const desiredDays=Math.max(1,Math.min(6,Number(p.days)||4)); // one genuine rest day, even if user selected seven
+ const spacing=[2,4,1,3,5,6];
+ let active=[Number(p.longday)];
+ for(let offset of spacing){if(active.length>=desiredDays)break;let j=(Number(p.longday)+offset)%7;if(!active.includes(j))active.push(j)}
+ active.sort((a,b)=>a-b);
  for(let i=0;i<p.weeks;i++){
-  const taperStart=p.weeks-taper;
   let phase=i>=taperStart?'Taper':i>0&&i%4===3?'Recovery':i<2?'Foundation':i>=Math.max(3,taperStart-4)?'Race-specific':'Build';
   let target;
-  if(i===0)target=last;
+  if(i===0)target=buildAnchor;
   else if(phase==='Taper'){
-   let remaining=p.weeks-i;
+   const remaining=p.weeks-i;
    target=peak*(remaining===3?.8:remaining===2?.62:.45);
-  }else if(phase==='Recovery')target=last*.78;
-  else target=Math.min(cap,last*(1+rate));
-  if(base===0){target=Math.min(10,2.5+i*.65);if(phase==='Recovery')target*=.8;if(phase==='Taper')target*=.7;}
-  target=round(Math.max(0,target));
-  if(phase!=='Taper'&&phase!=='Recovery')peak=Math.max(peak,target);
-  last=phase==='Recovery'?Math.max(target,base*.85):target;
-  let active=[p.longday],spacing=[2,4,1,3,5,6];
-  for(let offset of spacing){if(active.length>=Number(p.days))break;let j=(p.longday+offset)%7;if(!active.includes(j))active.push(j)}
-  active.sort((a,b)=>a-b);
-  // If capacity is low, avoid turning a single long run into a huge fraction of weekly mileage.
-  let preferredLong=Math.min(target*b.longShare,b.longCap);
-  let longCap=target*(Number(p.days)<=2?.42:Number(p.days)===3?.36:ultra?.34:.32);
-  let long=round(Math.min(preferredLong,longCap));
-  if(longRecent!==null&&Number.isFinite(longRecent)){
-    // Bound increases relative to what the runner has actually run lately; modest gradual growth.
-    long=Math.min(long,round(longRecent*(1+Math.min(i,10)*.08)+.5));
+  }else if(phase==='Recovery')target=buildAnchor*.78;
+  else {buildAnchor=buildAnchor*(1+rate);target=buildAnchor;}
+  if(base===0){ // Beginner run/walk: establish time-on-feet conservatively, not nominal ultra readiness.
+   const elapsed=i-Math.floor(i/4);
+   target=Math.min(12,2.5+elapsed*.8);
+   if(phase==='Recovery')target*=.8;
+   if(phase==='Taper')target=Math.min(target,peak*.7);
+   if(phase!=='Recovery'&&phase!=='Taper')buildAnchor=target;
   }
-  long=Math.max(0,long);
-  const b2b=ultra&&!beginner&&p.consistency==='steady'&&Number(p.days)>=5&&phase==='Race-specific'&&target>=28&&p.goal!=='6 Hour';
-  let after=(p.longday+1)%7;
-  if(b2b&&!active.includes(after)){let replace=active.find(j=>j!==p.longday);if(replace!==undefined)active=active.filter(j=>j!==replace).concat(after).sort((a,b)=>a-b)}
-  let second=b2b?round(Math.min(8,target*.12,long*.4)):0;
-  let others=active.filter(j=>j!==p.longday&&(!b2b||j!==after));
-  let remaining=Math.max(0,target-long-second);
-  const sessions=days.map((day,j)=>({id:`${i}-${j}`,day,type:'Rest / mobility',miles:0,pace:'',details:'Rest, walk, or gentle mobility.',status:'planned',actual:null,rpe:null,fatigue:null,pain:false,notes:'',manual:false}));
-  // Quality is intentionally limited to runners with a consistent foundation.
-  const allowQuality=b.quality>0&&!beginner&&!returning&&p.days>=4&&phase!=='Recovery'&&phase!=='Taper'&&i>=2;
-  const qualityDay=others.find(j=>(j+7-p.longday)%7!==1)??others[0];
+  target=halfMiles(target);
+  if(phase!=='Taper'&&phase!=='Recovery')peak=Math.max(peak,target);
+  const sessions=days.map((day,j)=>({id:`${i}-${j}`,day,type:'Rest / mobility',miles:0,pace:'',details:'No running scheduled. Rest, walk gently, or do relaxed mobility.',status:'planned',actual:null,rpe:null,fatigue:null,pain:false,notes:'',manual:false}));
+  // Reserve 0.5-mile units for the longer session, but never consume the entire training week.
+  const longShare=Math.min(b.longShare,desiredDays<=2?.45:desiredDays===3?.37:b.longShare);
+  let long=halfMiles(Math.min(target*longShare,b.longCap));
+  if(longRecent!==null&&Number.isFinite(longRecent)){
+   // Per-run increases are constrained by recent history but should not freeze forever.
+   // The progression here is a heuristic, not a safe/injury-free threshold.
+   long=Math.min(long,halfMiles(longRecent*Math.pow(1.06,i+1)+.5));
+  }
+  if(desiredDays>1&&target>=1)long=Math.min(long,halfMiles(Math.max(.5,target*.6)));
+  const b2b=ultra&&!beginner&&!returning&&p.consistency==='steady'&&desiredDays>=5&&phase==='Race-specific'&&target>=28&&p.goal!=='6 Hour';
+  let daysUsed=active.slice(),after=(Number(p.longday)+1)%7;
+  if(b2b&&!daysUsed.includes(after)){const replace=daysUsed.find(j=>j!==Number(p.longday));if(replace!==undefined)daysUsed=daysUsed.filter(j=>j!==replace).concat(after).sort((a,b)=>a-b)}
+  let second=b2b?halfMiles(Math.min(8,target*.12,long*.4)):0;
+  const others=daysUsed.filter(j=>j!==Number(p.longday)&&(!b2b||j!==after));
+  if(others.length&&target>=daysUsed.length*.5){
+   const reserve=others.length*.5;
+   if(long+second>target-reserve){long=halfMiles(Math.max(.5,target-reserve-second))}
+  }
+  const remaining=Math.max(0,halfMiles(target-long-second));
+  const allowQuality=b.quality>0&&!beginner&&!returning&&desiredDays>=4&&phase!=='Recovery'&&phase!=='Taper'&&i>=2;
+  const qualityDay=others.find(j=>(j+7-Number(p.longday))%7!==1)??others[0];
   const qualityType=b.family==='short'?'Intervals / hills':b.family==='half'?'Threshold / tempo':b.family==='marathon'?'Marathon-specific steady':ultra?'Controlled hills':'Easy run';
   const qualityDetails=b.family==='short'?'Warm up easily; include brief controlled faster repetitions with full recoveries; cool down. All within session distance.':b.family==='half'?'Comfortably hard but controlled blocks with easy warm-up/cooldown. Do not race the workout.':b.family==='marathon'?'Controlled steady effort, not an all-out marathon pace test; rehearse fueling where appropriate.':'Short, controlled uphill efforts on event-appropriate terrain; walk down to recover.';
-  let totalWeight=others.reduce((acc,j)=>acc+(j===qualityDay&&allowQuality?1.15:1),0);
-  for(let j of others){let isQuality=allowQuality&&j===qualityDay,weight=isQuality?1.15:1,mi=totalWeight?round(remaining*weight/totalWeight):0;
-   sessions[j]={...sessions[j],type:isQuality?qualityType:(b.family==='beginner'?'Run / walk':'Easy run'),miles:mi,pace:isQuality?'':(b.family==='beginner'?'':p.pace),details:isQuality?qualityDetails:b.family==='beginner'?'Alternate relaxed walking and short jogging intervals, guided by breathing and comfort.':'Easy conversational effort; use the talk test and slow down as needed.'};}
-  sessions[p.longday]={...sessions[p.longday],type:b.family==='beginner'?'Run / walk': 'Long run',miles:long,pace:b.family==='beginner'?'':p.pace,details:ultra?'Comfortable time on feet; practice terrain, hydration, and fueling at an individually tolerable rate.':b.family==='marathon'?'Easy aerobic endurance; practice race-day fluids and fueling.':b.family==='beginner'?'Run/walk continuously at a comfortable effort; the goal is time moving, not speed.':'Easy aerobic endurance; finish feeling in control.'};
-  if(b2b)sessions[after]={...sessions[after],type:'Back-to-back easy',miles:second,pace:p.pace,details:'Optional very easy second long day. Skip and recover if unusually fatigued.'};
-  let allocated=sum(sessions.map(s=>s.miles));
-  if(others.length){let j=others[others.length-1];sessions[j].miles=round(Math.max(0,sessions[j].miles+target-allocated))}
-  else if(target>long){sessions[p.longday].miles=round(long);}
-  // Suppress faster prescriptions for a runner building up from zero.
-  if(base===0&&beginner)for(let sess of sessions)if(sess.miles>0){sess.type='Run / walk';sess.pace='';sess.miles=Math.min(2.5,sess.miles);sess.details='Very easy run/walk practice; stop for pain and progress by comfort.'}
-  let raceMessage=ultra?'Focus on sustained easy effort, terrain specificity and fueling practice.':b.family==='short'?'Develop aerobic consistency and controlled speed only when ready.':b.family==='half'?'Develop sustainable endurance and threshold tolerance.':b.family==='marathon'?'Build steady endurance, pacing control and fueling tolerance.':'Build a comfortable running habit.';
-  out.push({phase,sessions,note:(phase==='Recovery'?'Reduced-load recovery week. ':phase==='Taper'?'Reduced volume ahead of race. ':'')+raceMessage});
+  const weights=others.map(j=>j===qualityDay&&allowQuality?1.15:1);
+  const allocations=distributeHalfMiles(remaining,others,weights);
+  for(let j of others){const isQuality=allowQuality&&j===qualityDay;
+   sessions[j]={...sessions[j],type:isQuality?qualityType:(b.family==='beginner'?'Run / walk':'Easy run'),miles:allocations[j]||0,pace:isQuality?'':(b.family==='beginner'?'':p.pace),details:isQuality?qualityDetails:b.family==='beginner'?'Alternate relaxed walking and short jogging intervals, guided by breathing and comfort.':'Easy conversational effort; use the talk test and slow down as needed.'};
+  }
+  sessions[Number(p.longday)]={...sessions[Number(p.longday)],type:b.family==='beginner'?'Run / walk':'Long run',miles:long,pace:b.family==='beginner'?'':p.pace,details:ultra?'Comfortable time on feet; practice terrain, hydration, and fueling at an individually tolerable rate.':b.family==='marathon'?'Easy aerobic endurance; practice race-day fluids and fueling.':b.family==='beginner'?'Run/walk continuously at a comfortable effort; the goal is time moving, not speed.':'Easy aerobic endurance; finish feeling in control.'};
+  if(b2b)sessions[after]={...sessions[after],type:'Back-to-back easy',miles:second,pace:p.pace,details:'Optional easy second endurance day. Skip for unusual fatigue, injury concerns, or inadequate recovery.'};
+  if(desiredDays===1&&target>long){sessions[Number(p.longday)].miles=target}
+  // Preserve the whole half-mile weekly target despite discrete per-day rounding.
+  const allocated=sum(sessions.map(s=>s.miles));
+  const diff=halfMiles(target-allocated);
+  if(diff>0&&others.length){const j=others[others.length-1];sessions[j].miles+=diff}
+  else if(diff>0&&!others.length)sessions[Number(p.longday)].miles+=diff;
+  if(base===0&&beginner)for(let sess of sessions)if(sess.miles>0){sess.type='Run / walk';sess.pace='';sess.details='Very easy run/walk practice; stop for pain and progress by comfort.'}
+  const raceMessage=ultra?'Focus on sustained easy effort, terrain specificity and fueling practice.':b.family==='short'?'Develop aerobic consistency and controlled speed only when ready.':b.family==='half'?'Develop sustainable endurance and threshold tolerance.':b.family==='marathon'?'Build steady endurance, pacing control and fueling tolerance.':'Build a comfortable running habit.';
+  const buildNote=phase==='Recovery'?'Recovery week: deliberately lower training load before continuing from your previous build level. ':phase==='Taper'?'Taper week: reduce volume ahead of the goal event. ':'';
+  const caution=Number(p.days)===7?'You selected seven running days, but Mile Zero reserves one rest/mobility day. ':'';
+  out.push({phase,sessions,note:buildNote+caution+raceMessage});
  }
- return {profile:p,weeks:out,created:new Date().toISOString(),adjustmentHistory:[],assessment:{...assessment,blueprint:undefined},engineVersion:'0.9'};
+ let first=out[0]?halfMiles(sum(out[0].sessions.map(s=>s.miles))):0;
+ let peakRounded=halfMiles(Math.max(...out.map(w=>sum(w.sessions.map(s=>s.miles)))));
+ assessment.notes.push(`Build progression starts near ${first} mi/week, with a highest scheduled week near ${peakRounded} mi. Recovery weeks intentionally dip below the ongoing build trend.`);
+ if(ultra&&peakRounded<35)assessment.issues.push('The planned peak is modest for this ultra goal. The schedule may be insufficient race preparation; consider more preparation time, further base-building, or a different goal rather than forcing abrupt mileage increases.');
+ return {profile:p,weeks:out,created:new Date().toISOString(),adjustmentHistory:[],assessment:{...assessment,blueprint:undefined},engineVersion:'1.0'};
 }
 // One account-linked portfolio, retaining older single-plan backups automatically.
 const portfolioKey=()=>activeStorageKey()+'_portfolio_v6';

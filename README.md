@@ -1,24 +1,16 @@
-# MILE Ø v0.9 — race-specific plan engine (prototype)
+# MILE Ø v1.0 — Progressive Endurance Draft Engine
 
-## Installation
+### What changed
+- Current comfortable weekly mileage now sets the **starting point**, not a fixed multiplier ceiling.
+- Each build week progresses from the previous **build** benchmark, not the reduced recovery week.
+- Every fourth pre-taper week is intentionally easier; event-dependent taper is retained.
+- Minimum one complete rest/mobility day each week, even when seven days are selected.
+- Scheduled run distances and weekly totals use **0.5-mile increments**. Manually logged actual mileage can still be more precise.
+- 50-mile/ultra plans flag very low planned peak volumes for review rather than claiming readiness.
+- All existing accounts, multi-plan storage, trends, weather context and runner-approved adaptation remain.
 
-1. In the current app, download a **full backup** of every plan before updating.
-2. Unzip this package. Upload `index.html`, `sw.js`, `manifest.webmanifest`, and `icon.svg` to the ROOT of your GitHub Pages repository, replacing existing files.
-3. **Keep your existing `config.js`.** Do not upload secrets or your database password; no new SQL is needed.
-4. Commit, check GitHub Actions deployment, and reopen the app. If the old version persists, clear the website's cached data only after backing up.
-5. In My Plans, choose **New plan** and fill in the assessment questions. Existing plans remain intact unless deliberately regenerated.
+### Installation
+Back up your data first. Upload `index.html`, `sw.js`, `manifest.webmanifest`, `icon.svg` to the root of the existing GitHub Pages repository. **Keep your configured `config.js`**. No new SQL. Create a **new plan** to test the engine; existing plans remain unchanged.
 
-## What changed
-
-* Goal-specific planning for first-mile, 5K, 10K, half, full, ultras, and timed ultras.
-* New assessment: 30-day longest run, training consistency, race surface.
-* Foundation, build, recovery, race-specific, and taper phases; different taper lengths by event.
-* Controlled workouts for suitable runners; no automatic high-intensity training for beginners or runners returning after a break.
-* Conservative long-run readiness bounds and explicit readiness warnings for ambitious targets.
-* Preserves portfolios, runner profiles, workout logs, runner approval, Trends, and weather preferences from v0.8.1.
-
-## Important limitations
-
-This is a **rules-based planning prototype**, not a connected generative AI, medical advice, or a validated coaching product. It cannot guarantee race readiness or prevent injury. Weather does not yet dynamically change generated workouts; it adds optional context to training reviews. Multi-plan calendar is still a viewing tool, not a coordinated dual-race prescription. For beginner runners with no current mileage, numeric distance-based plans are especially crude and should be replaced with timed run/walk intervals in a later update.
-
-Do not launch this commercially as a verified training coach without testing plans across runner profiles and obtaining qualified sports-science/endurance-coach review.
+### Limitations
+This is an experimental rules-based training planner, not a validated or medically reviewed coach. Longer plans may permit higher progression, but cannot establish injury safety or race readiness. Plans should be reviewed by a qualified coach before reliance on them for difficult events. Changes in mileage do not guarantee performance improvements.

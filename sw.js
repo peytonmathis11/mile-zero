@@ -1,4 +1,4 @@
-const CACHE = 'mile-zero-v9-race-engine-2026-11-10';
+const CACHE = 'mile-zero-v10-progressive-2026-11-11';
 const ASSETS = ['./','./index.html','./manifest.webmanifest','./icon.svg','./config.js'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));self.skipWaiting()});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))));self.clients.claim()});
