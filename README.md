@@ -1,29 +1,28 @@
-# MILE Ø · Version 0.3 — Runner-approved training intelligence
+# MILE Ø v0.5 — Earthy design + Supabase accounts (beta)
 
-## What changed
-- Reviews your last 14 **logged running sessions**, comparing planned and actual miles, missed workouts, fatigue, effort, and pain flags.
-- Proposes conservative changes to up to 5 future **unlogged** workouts, and explains why.
-- You can approve individual workouts or decline all. Manually edited workouts are unchecked by default.
-- Approval / decline history appears on **Progress**, with undo of approvals where sessions have not changed since approval.
-- Workout distances, paces, days, notes and schedules remain editable.
-- Includes local storage and JSON / CSV export; no accounts or paid API required.
+This includes the forest green / khaki / stone grey / charcoal design. **MILE Ø** remains plain text inside the app; the mountain M is reserved for the eventual phone app icon.
 
-**This is rules-based training adaptation, not real AI.** It is not individualized medical advice. Pain flags trigger a conservative pause proposal; seek qualified advice where appropriate. AI model integration and longitudinal learning will require backend development and responsible data handling.
+## What is new
+- Account tab with email signup, email login, and logout using Supabase Auth
+- Individual cloud training records with database row-level security
+- Progress, workouts, preferences and adjustment history saved together
+- A guest plan stays separate from each user's plan
+- Changes save locally first, then attempt to sync to the cloud when signed in
+- Buttons to manually save, load, and copy a guest plan to an account
+- Existing rules-based recommendations remain runner-approved; paid AI and billing are **not** implemented
 
-## Update your GitHub Pages site
-1. Export a JSON backup from the current app first (Plan Settings → Download full backup).
-2. Unzip this package and upload its **files** to the **root** of your public `mile-zero` GitHub repository (not the enclosing folder).
-3. Confirm replacements, then commit. The service-worker cache version is updated for this release.
-4. Open your GitHub Pages address and refresh; if old content persists, check in a private browser window.
+## Setup (required for real accounts)
+1. In Supabase: open **SQL Editor**, paste the contents of `setup.sql`, and run it.
+2. Open **Project Settings > API Keys** (or **Connect**). Copy the **Project URL** and the public `sb_publishable_...` key (or legacy anon key). NEVER use a `service_role` / `sb_secret_` key.
+3. Edit `config.js` to fill in `url` and `publishableKey` as strings in quotes. Public browser apps may contain this publishable key when row-level security is set up.
+4. Supabase **Authentication > URL Configuration**: set the Site URL to `https://peytonmathis11.github.io/mile-zero/` and add `https://peytonmathis11.github.io/mile-zero/**` as a redirect URL.
+5. In **Authentication > Providers > Email**, check the settings for confirmation emails. With confirmation enabled, users may need to verify their email before signing in. Supabase default emails have rate limits and are not production-ready.
+6. Upload `index.html`, `sw.js`, `manifest.webmanifest`, `icon.svg`, and `config.js` to GitHub Pages repository root (NOT `setup.sql`, which need not be published). Commit changes.
+7. Open the **Account** tab and sign up / sign in.
 
-### Saving data
-This release keeps the existing `mile_zero_v2` localStorage key intentionally, so it should retain data on the same browser and origin. Always export a backup before updating. Data will **not** synchronize between phones, browsers, or devices.
-
-### Testing checklist
-- Create a plan and edit a future workout.
-- Log a few completed/missed runs with effort and fatigue.
-- Tap **Review training**; select individual proposed changes and approve them.
-- Check **Progress → Training decisions**, undo an approval, and verify only unchanged, unlogged sessions are restored.
-- Export and re-import a backup.
-
-Long-term concept: secure profiles, weekly trends and smart coaching using an actual AI model, with users in charge of every suggested edit.
+### Important notes
+- Before updating, use **Plan Settings > Download full backup**.
+- Cloud sync is beta, with simple last-write-wins behavior. Don't edit the same account on multiple devices at once.
+- Existing anonymous local data can be explicitly copied to a signed-in account using the **Copy guest plan into account** button. It is NEVER automatically uploaded on signup.
+- Never expose private server keys in GitHub. RLS is essential.
+- There is no billing, payment collection or generative AI in this build. GitHub Pages is for prototyping, not commercial SaaS hosting.

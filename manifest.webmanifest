@@ -1,1 +1,17 @@
-{"name":"Mile Zero — Earn Your Distance","short_name":"Mile Ø","description":"Flexible running plans for every distance","start_url":"./","display":"standalone","background_color":"#f1eee7","theme_color":"#222821","icons":[{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]}
+{
+  "name": "Mile Zero \u2014 Earn Your Distance",
+  "short_name": "Mile \u00d8",
+  "description": "Flexible running plans for every distance",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#E6E2D8",
+  "theme_color": "#18221C",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
