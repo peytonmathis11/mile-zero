@@ -59,6 +59,18 @@ body{background:linear-gradient(180deg,#E6E2D8 0%,#F0EEE8 55%,#E5E0D5 100%);colo
 .compare-result{background:#EAF0E5;border-color:#B9CDB4;margin-bottom:17px}
 .compare-open{display:block;width:100%;margin-top:10px;padding:9px 8px;background:#E6EEE3;border:1px solid #C5D4C2;border-radius:8px;color:#254A34;font-weight:800;font-size:11px;text-align:center;white-space:normal;overflow-wrap:anywhere}
 @media(max-width:580px){.compare-modal-grid{grid-template-columns:1fr}.comparison-modal{width:min(96vw,780px);padding:17px}}
+
+/* Dashboard schedule: full-width, adaptive seven-day cards; no narrow columns on phones. */
+.dashboard-week-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,205px),1fr));gap:10px;margin-top:14px}
+.dashboard-week-card{border:1px solid #D1D4C9;background:#FAF9F5;border-radius:14px;padding:15px;min-width:0;overflow-wrap:anywhere}
+.dashboard-week-card.today{border-color:#3C6149;box-shadow:inset 0 0 0 1px #3C6149}
+.dashboard-week-card .dayname{font-size:11px;letter-spacing:.6px;font-weight:850;color:#526C56;text-transform:uppercase}
+.dashboard-week-card .miles{font-size:25px;font-weight:900;color:#20372B;margin:8px 0 3px}
+.dashboard-week-card .workout{font-weight:800;font-size:13px}
+.dashboard-week-card .actions{margin-top:10px}
+.dashboard-week-card .actions button{padding:8px 10px;font-size:12px}
+.dashboard-week-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+@media(max-width:540px){.dashboard-week-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dashboard-week-card{padding:11px}.dashboard-week-card .miles{font-size:21px}}
 </style></head><body>
 <div class="app"><header class="top"><div class="brand">MILE <em>Ø</em></div><div class="topright">EARN YOUR DISTANCE.</div></header>
 <nav class="nav" aria-label="Main navigation"><button data-tab="home" class="active">Dashboard</button><button data-tab="plans">My Plans</button><button data-tab="plan">Calendar</button><button data-tab="progress">Progress</button><button data-tab="runner">Profile</button></nav>
@@ -922,7 +934,84 @@ function renderWeather(){if(!weatherSnapshot)return;const w=weatherSnapshot;
  weatherMessage(`<div class="eyebrow">${esc(w.label)} · CURRENT CONDITIONS</div><div class="trend-grid" style="margin-top:12px"><div class="trend-item"><span class="muted">TEMPERATURE</span><strong>${Math.round(w.temperature)}°F</strong></div><div class="trend-item"><span class="muted">FEELS LIKE</span><strong>${Math.round(w.feels)}°F</strong></div><div class="trend-item"><span class="muted">HUMIDITY</span><strong>${Math.round(w.humidity)}%</strong></div><div class="trend-item"><span class="muted">WIND</span><strong>${Math.round(w.wind)} mph</strong></div></div><div class="note warn" style="margin-top:12px"><strong>Training consideration:</strong> ${esc(weatherCaution(w))} No changes will be applied without your approval.</div><h3 style="margin-top:17px">7-day outlook</h3><div class="weather-days">${w.days.map(d=>`<div class="weather-day"><strong>${esc(new Date(d.date+'T12:00:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}))}</strong><div>${Math.round(d.hi)}° / ${Math.round(d.lo)}°F</div><small>Rain chance: ${Math.round(d.rain||0)}%</small></div>`).join('')}</div><p class="footnote">Forecast retrieved ${new Date(w.at).toLocaleString()}. Location coordinates are not stored in training records. Conditions change; always check updated forecasts.</p>`);
 }
 
-function render(){renderTrends();updateAccountUI();if(data)setProfile(data.profile);else setProfile(baseProfile());renderHome();renderPlan();renderProgress();renderPlans();renderCalendarCombined();renderIntegration();renderCalendarModeSelector();renderRunnerProfile();renderSavedTrainingCity()}
+
+// v2.6 — Dashboard's weekly schedule always reflects the selected Calendar mode.
+// This view never merges separate plans or writes to the original workouts.
+let dashboardWeekOffset=0;
+let dashboardWeekIdentity='';
+function dashboardWeekMove(delta){
+ const item=dashboardScheduleSource();
+ if(!item)return;
+ const base=dashboardCurrentWeek(item.plan);
+ dashboardWeekOffset=clamp(dashboardWeekOffset+delta,-base,item.plan.weeks.length-1-base);
+ renderDashboardTrainingWeek();
+}
+function dashboardCurrentWeek(plan){
+ const start=parseLocalDate(plan?.profile?.startDate);
+ if(!start||!plan?.weeks?.length)return 0;
+ const current=parseLocalDate(monday());
+ const elapsed=Math.round((Date.UTC(current.getFullYear(),current.getMonth(),current.getDate())-Date.UTC(start.getFullYear(),start.getMonth(),start.getDate()))/604800000);
+ return clamp(elapsed,0,plan.weeks.length-1);
+}
+function dashboardScheduleSource(){
+ // The approved integrated plan is selected only when it is current AND Calendar mode is integrated.
+ if(calendarMode()==='integrated'&&isIntegratedCurrent()&&portfolio.integratedPlan?.plan){
+  const x=portfolio.integratedPlan;
+  const names=integrationSources().map(e=>e.name);
+  return {plan:x.plan,integrated:true,name:'Integrated '+names.join(' / '),identity:'integrated:'+x.sourceIds.join('/')};
+ }
+ if(!data?.weeks?.length)return null;
+ return {plan:data,integrated:false,name:displayPlanName(),identity:'separate:'+(portfolio.activeId||'guest')};
+}
+function renderDashboardTrainingWeek(){
+ const host=$('homeContent'),source=dashboardScheduleSource();
+ if(!host||!source)return;
+ host.querySelector('#dashboardTrainingWeek')?.remove();
+ if(dashboardWeekIdentity!==source.identity){dashboardWeekOffset=0;dashboardWeekIdentity=source.identity;}
+ const plan=source.plan,base=dashboardCurrentWeek(plan);
+ const wi=clamp(base+dashboardWeekOffset,0,plan.weeks.length-1);
+ dashboardWeekOffset=wi-base;
+ const week=plan.weeks[wi];
+ if(!week?.sessions)return;
+ const actual=sum(week.sessions.filter(s=>s.status==='done').map(s=>s.actual??s.miles));
+ const planned=sum(week.sessions.map(s=>s.miles));
+ const today=isoDate(new Date());
+ const start=dateAt(plan.profile.startDate,wi,0),end=dateAt(plan.profile.startDate,wi,6);
+ const cards=week.sessions.map((s,di)=>{
+  const date=isoDate(dateAt(plan.profile.startDate,wi,di));
+  const logged=s.status==='done',missed=s.status==='missed',race=s.type==='RACE DAY';
+  const distance=logged?(s.actual??s.miles):s.miles;
+  const status=logged?'Completed':missed?'Missed':race?'Race day':Number(s.miles)>0?'Planned':'Rest';
+  const canLog=Number(s.miles)>0||race||logged||missed;
+  const logAction=source.integrated?`integratedLog(${wi},${di})`:`openLog(${wi},${di})`;
+  const editAction=source.integrated?`integratedEdit(${wi},${di})`:`openEdit(${wi},${di})`;
+  const statusColor=logged?'#2D6242':missed?'#A2683B':'#687369';
+  return `<div class="dashboard-week-card ${date===today?'today':''}">
+    <div class="dayname">${esc(days[di])} · ${esc(dateLabel(parseLocalDate(date)))}${date===today?' · TODAY':''}</div>
+    <div class="miles">${race?'RACE':round(Number(distance)||0)+' mi'}</div>
+    <div class="workout">${esc(s.type||'Rest')}</div>
+    <div class="muted">${esc(s.pace||'By effort')}</div>
+    <div style="font-size:11px;color:${statusColor};font-weight:800;margin-top:7px">${status}</div>
+    ${canLog||Number(s.miles)>0?`<div class="actions">${canLog?`<button class="btn dark sm" type="button" onclick="${logAction}">${logged?'View log':'Log'}</button>`:''}<button class="btn light sm" type="button" onclick="${editAction}">Edit</button></div>`:''}
+   </div>`;
+ }).join('');
+ const section=document.createElement('section');
+ section.id='dashboardTrainingWeek';
+ section.className='panel';
+ section.style.marginTop='18px';
+ section.innerHTML=`<div class="section-title" style="margin-top:0"><div><div class="eyebrow">${source.integrated?'ONE SCHEDULE / TWO GOALS':'YOUR WEEKLY TRAINING'}</div>
+  <h2>This week's schedule</h2><p class="subtle" style="margin:5px 0;overflow-wrap:anywhere">${esc(source.name)}</p>
+  <p class="muted" style="margin:4px 0">${esc(dateLabel(start))} – ${esc(dateLabel(end))} · ${planned} mi planned · ${actual} mi completed</p></div>
+  <div class="dashboard-week-controls"><button class="btn light sm" type="button" onclick="dashboardWeekMove(-1)" ${wi===0?'disabled':''}>←</button>
+  <span class="pill">Week ${wi+1} / ${plan.weeks.length}</span>
+  <button class="btn light sm" type="button" onclick="dashboardWeekMove(1)" ${wi===plan.weeks.length-1?'disabled':''}>→</button></div></div>
+  <div class="dashboard-week-grid">${cards}</div>
+  <div class="actions"><button class="btn dark sm" type="button" onclick="navigate('plan')">Open full calendar →</button>
+  ${source.integrated?'<span class="subtle">Integrated workouts are logged only once.</span>':''}</div>`;
+ host.appendChild(section);
+}
+
+function render(){renderTrends();updateAccountUI();if(data)setProfile(data.profile);else setProfile(baseProfile());renderHome();renderDashboardTrainingWeek();renderPlan();renderProgress();renderPlans();renderCalendarCombined();renderIntegration();renderCalendarModeSelector();renderRunnerProfile();renderSavedTrainingCity()}
 function displayPlanName(){
   if(!data)return '';
   const name=authUser?currentEntry()?.name:getPendingDraft()?.name;

@@ -1,7 +1,11 @@
-MILE Ø v2.5 — adaptive after-run reviews for integrated training
+MILE Ø v2.6 — Dashboard weekly schedule restoration
 
-Back up your current working index.html and export your plans before uploading.
-Upload index.html, training-engine.js and sw.js to the root of your GitHub repository together.
-Do NOT upload or replace config.js.
-After an integrated workout is logged, Mile Ø reviews recent integrated training and presents optional changes to future unlogged workouts. Nothing changes without runner approval.
-This remains a rules-based prototype; proposed percentage reductions are heuristics, not validated training recommendations.
+Back up your working index.html and export training data first.
+Upload index.html, training-engine.js and sw.js together to GitHub repo root.
+Do not change config.js.
+
+Dashboard now shows all seven days from the selected Calendar mode.
+In integrated mode it reads the approved integrated schedule and uses integrated workout logging/editing.
+In separate mode it reads the active original plan and uses regular logging/editing.
+Previous/next controls switch weeks without changing Calendar mode.
+No change to data format or training engine decisions.
