@@ -1407,7 +1407,7 @@ async function handleSignedIn(user){
  // Existing cloud record always takes priority. Do not silently move a guest plan between accounts.
  try{const record=await cloudRecord();if(cycle!==loginCycle)return;if(record&&(validPortfolio(record.payload)||validPlan(record.payload))){portfolio=normalizePortfolio(record.payload);setActive();storePortfolio(false);render();cloudStatus('Training loaded from your account. Future changes will sync.');}
  else if(data){cloudStatus('Your locally saved account plan is ready. Save to cloud to back it up.');}
- else{cloudStatus('Account ready. Build a plan, or import your guest training from this device.')}await claimPendingDraft();render();navigate(data?'home':'settings')}catch(e){if(cycle===loginCycle)cloudStatus('Signed in. Could not reach training database: '+(e.message||'check setup'));}
+ else{cloudStatus('Account ready. Build a plan, or import your guest training from this device.')}await claimPendingDraft();render();navigate(data?'home':'settings');loadRecentStravaRuns()}catch(e){if(cycle===loginCycle)cloudStatus('Signed in. Could not reach training database: '+(e.message||'check setup'));}
 }
 async function doAuth(kind){
  if(!supa){toast('Finish Supabase setup first.');return}
