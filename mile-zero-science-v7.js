@@ -1,4 +1,4 @@
-/* MILE Ø Science Rules v7 — race-specific, explainable, deterministic coaching.
+/* MILE Ø Science Rules v7.2 — target-aware mileage without universal race ceilings.
    Load AFTER mile-zero-coach-v6.js and BEFORE mile-zero-live-upgrade.js.
    A live athlete's plan is changed ONLY by explicit regeneration or approval.
    Evidence-informed heuristics, NOT validated safe mileage thresholds or medical advice.
@@ -9,7 +9,7 @@
 const previous=root.MileZeroCoachV6;
 if(!previous){throw new Error('MileZeroScienceV7 requires mile-zero-coach-v6.js first');}
 const days=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-// These mileage ranges are editable COACHING REFERENCE BANDS, not population norms,
+// These mileage ranges are advisory COACHING REFERENCE BANDS, never peak-mileage limits,
 // individual prescriptions, or evidence-supported minimums to finish an event.
 // novice/steady/advanced denote current training CAPACITY, not race-distance entitlement.
 const RACE_RULES={
@@ -154,9 +154,8 @@ function build(p){
  const hardRequested=Number(p.hardRuns??1),freshness=p.freshnessFirst!==false;
  const pref=p.volumePreference||'steady';
  // Coaching rates to compare target feasibility, NOT clinically proven injury-prevention percentages.
- const progression=returning?.02:variable?.025:novice?.025:pref==='gradual'?.035:pref==='progressive'&&experience==='advanced'?.065:pref==='progressive'?.052:.045;
  const fromRecent=base*(returning?.75:variable?.9:1);
- let anchor=fromRecent,peak=fromRecent,buildCount=0,lastLong=Number(p.recentLong)>0?Number(p.recentLong):Math.max(1,base*.29),longKnown=Number(p.recentLong)>0;
+ let anchor=fromRecent,buildCount=0,lastLong=Number(p.recentLong)>0?Number(p.recentLong):Math.max(1,base*.29),longKnown=Number(p.recentLong)>0;
  const easy=easyPace(p),easyHr=measuredHr(p,'easy');
  const warnings=[],notes=[],out=[];
  notes.push(`Experience profile: ${experience}, determined from current mileage, consistency, selected level, and available training/event history.`);
@@ -170,39 +169,81 @@ function build(p){
  for(const g of goals){
   if(g.timeGoal&&g.spec.kind!=='timed'){const secs=parseClock(g.timeGoal),miles=({ 'First mile / run-walk':1,'5K':3.106856,'10K':6.213712,'Half Marathon':13.1094,'Marathon':26.2188,'50K':31.0686,'50 Mile':50,'100K':62.1371,'100 Mile':100 })[g.distance];g.goalPace=paceLabel(secs/miles);}
  }
+ // Mileage is a planning objective, NOT a race-distance cap. The reference band
+ // is contextual advice only; an established runner above it is not restricted.
+ // Without a preferred peak, suggest a modest goal informed by race demands and
+ // recently established mileage, then assess what the actual build can support.
+ const referenceMid=(recommendedLower+recommendedUpper)/2;
+ const requestedTarget=preferredPeak!==null?preferredPeak:
+   Math.max(base, established||0, experience==='new'?recommendedLower:referenceMid);
+ const advanceRate=returning?.025:variable?.035:novice?.035:
+   pref==='gradual'?.045:pref==='progressive'&&experience==='advanced'?.09:
+   pref==='progressive'?.075:experience==='advanced'?.07:.06;
+ // Schedule the build in advance: race weeks, tapers and recovery weeks do NOT
+ // count as mileage-progression opportunities. A peak is planned before taper.
+ function context(wi){
+   const start=plusDays(p.startDate,wi*7),weekDates=days.map((_,d)=>plusDays(start,d));
+   const pending=goals.filter(g=>g.raceDate>=start),nearest=pending[0]||goals.at(-1);
+   const raceInWeek=goals.filter(g=>weekDates.includes(g.raceDate));
+   const until=Math.floor(daysBetween(start,nearest.raceDate)/7);
+   const previousRace=goals.filter(g=>{
+     const elapsed=daysBetween(g.raceDate,start);
+     const window=['beginner','short'].includes(g.spec.kind)?3:g.spec.kind==='half'?5:g.spec.kind==='marathon'?10:14;
+     return g.raceDate<start&&elapsed<=window;
+   });
+   const taper=until>0&&until<=nearest.spec.taper;
+   const race=raceInWeek.length>0,post=previousRace.length>0;
+   const down=!race&&!post&&!taper&&wi>0&&((wi+1)%4===0);
+   const phase=race?'Race week':post?'Post-race recovery':taper?'Taper':down?'Recovery':wi<2?'Foundation':daysBetween(start,nearest.raceDate)<=42?'Race-specific':'Build';
+   return {start,weekDates,nearest,raceInWeek,recoveryDays:previousRace,primaryTaper:taper,raceWeek:race,postRace:post,downWeek:down,phase,weeksToNearest:until};
+ }
+ const contexts=Array.from({length:weeks},(_,wi)=>context(wi));
+ const isProgression=(c,wi)=>wi>0&&['Build','Foundation','Race-specific'].includes(c.phase);
+ const totalBuildSteps=contexts.filter(isProgression).length;
+ let stepsTaken=0;
+ const theoreticalReachable=totalBuildSteps>0?fromRecent*Math.pow(1+advanceRate,totalBuildSteps):fromRecent;
+ notes.push(`Preferred mileage is ${preferredPeak===null?'not specified':'a requested target, not a ceiling'}. No fixed race-distance peak-mileage ceiling is applied.`);
+ notes.push(`Training forecast: ${totalBuildSteps} non-recovery build opportunities, an individualized provisional progression allowance near ${(advanceRate*100).toFixed(1)}% per build opportunity. These are configurable heuristics, not proven safe rates.`);
+ if(preferredPeak!==null&&preferredPeak>theoreticalReachable+1){
+  warnings.push(`Requested peak ${preferredPeak} mi/week exceeds the estimated ${half(theoreticalReachable)} mi/week progression capacity over ${totalBuildSteps} build opportunities from the entered current base. The plan will show the shortfall rather than force a catch-up. Consider more time or provide verifiable recent training history.`);
+ }
+ const typicalOtherBase=Math.max(.5,(base-(longKnown?Math.min(lastLong,base*.55):base*.29))/Math.max(1,capDays-1));
  const originallyRequested=hardRequested;
  // The higher-volume race dictates endurance FOUNDATION; speed goals still retain their
  // own workout type. This is one schedule, NEVER the sum of two independent plans.
  for(let wi=0;wi<weeks;wi++){
-  const start=plusDays(p.startDate,wi*7),weekDates=days.map((_,d)=>plusDays(start,d));
-  const pending=goals.filter(g=>g.raceDate>=start);const nearest=pending[0]||goals.at(-1);
+  const ctx=contexts[wi];
+  const {start,weekDates,nearest,raceInWeek,recoveryDays,primaryTaper,raceWeek,postRace,downWeek,phase,weeksToNearest}=ctx;
   const endurance=topDistanceGoal(goals,start),speed=topSpeedGoal(goals,start);
-  const raceInWeek=goals.filter(g=>weekDates.includes(g.raceDate));
   const raceDays=new Set(raceInWeek.map(g=>weekDates.indexOf(g.raceDate)));
   const daysToNearest=daysBetween(start,nearest.raceDate);
-  const weeksToNearest=Math.floor(daysToNearest/7);
-  const recoveryDays=goals.filter(g=>g.raceDate<start&&daysBetween(g.raceDate,start)<=14);
-  const primaryTaper=weeksToNearest>0&&weeksToNearest<=nearest.spec.taper;
-  const raceWeek=raceInWeek.length>0;
-  const postRace=recoveryDays.length>0;
-  const downWeek=!raceWeek&&!postRace&&!primaryTaper&&wi>0&&((wi+1)%4===0);
-  const phase=raceWeek?'Race week':postRace?'Post-race recovery':primaryTaper?'Taper':downWeek?'Recovery':wi<2?'Foundation':daysToNearest<=42?'Race-specific':'Build';
   let target;
   if(wi===0)target=anchor;
-  else if(postRace)target=anchor*(recoveryDays.some(g=>['marathon','ultra','timed'].includes(g.spec.kind))?.45:.7);
+  else if(postRace)target=anchor*(recoveryDays.every(g=>['beginner','short'].includes(g.spec.kind))?.82:recoveryDays.some(g=>['marathon','ultra','timed'].includes(g.spec.kind))?.45:.7);
   else if(raceWeek)target=anchor*taperFactor(0,nearest.spec.taper);
   else if(primaryTaper)target=anchor*taperFactor(weeksToNearest,nearest.spec.taper);
   else if(downWeek)target=anchor*.80;
   else {
-   const rebuilding=established!==null&&established>anchor&&p.consistency==='steady'&&experience==='advanced';
-   const rate=rebuilding?Math.min(.075,progression+.012):progression;
-   anchor*=1+rate;buildCount++;
+   // Work BACKWARD from the requested (or recommended) peak so the weekly
+   // progression actually aims for it. If time is inadequate, increase only as
+   // allowed by the athlete-specific heuristic and report the shortfall.
+   const remainingSteps=Math.max(1,totalBuildSteps-stepsTaken);
+   const rawNeed=anchor>0&&requestedTarget>anchor?
+     Math.pow(requestedTarget/anchor,1/remainingSteps)-1:0;
+   const rate=Math.min(advanceRate,Math.max(0,rawNeed));
+   anchor=anchor>0?anchor*(1+rate):0;
+   buildCount++;stepsTaken++;
    target=anchor;
   }
-  if(base===0){target=Math.min(12,2.5+buildCount*.7);if(downWeek)target*=.8;if(raceWeek||primaryTaper)target*=.7;if(phase==='Build'||phase==='Foundation')anchor=target;}
-  if(preferredPeak!==null){target=Math.min(target,preferredPeak);anchor=Math.min(anchor,preferredPeak);}
+  if(base===0){
+   // New runner foundation: an ambitious ultra target does not turn zero
+   // experience into an immediate high-mileage plan.
+   target=Math.min(12,2.5+buildCount*.7);
+   if(downWeek)target*=.8;
+   if(raceWeek||primaryTaper)target*=.7;
+   if(['Build','Foundation','Race-specific'].includes(phase))anchor=target;
+  }
   target=half(target);
-  if(!['Recovery','Taper','Race week','Post-race recovery'].includes(phase))peak=Math.max(peak,target);
   const sessions=days.map((_,d)=>makeSession(wi,d));
   const protectedDays=new Set();
   for(const g of goals){
@@ -212,8 +253,9 @@ function build(p){
     for(let d=idx+1;d<7;d++){sessions[d]=makeSession(wi,d,'Post-race recovery',0,'Recover after the event; do not automatically make up missed workouts.');protectedDays.add(d);}
    }
    const eventBeforeWeek=daysBetween(g.raceDate,start);
-   if(eventBeforeWeek>0&&eventBeforeWeek<8){for(let d=0;d<7;d++){
-    if(daysBetween(g.raceDate,weekDates[d])<=7&&weekDates[d]>g.raceDate){protectedDays.add(d);sessions[d]=makeSession(wi,d,'Post-race recovery',0,'Recover after race; progression paused.');}
+   const recoveryWindow=['beginner','short'].includes(g.spec.kind)?2:g.spec.kind==='half'?4:g.spec.kind==='marathon'?9:14;
+   if(eventBeforeWeek>0&&eventBeforeWeek<=recoveryWindow){for(let d=0;d<7;d++){
+    if(daysBetween(g.raceDate,weekDates[d])<=recoveryWindow&&weekDates[d]>g.raceDate){protectedDays.add(d);sessions[d]=makeSession(wi,d,'Post-race recovery',0,'Recover after race; progression paused.');}
    }}
   }
   const available=active.filter(d=>!protectedDays.has(d));
@@ -224,7 +266,10 @@ function build(p){
    out.push({phase,sessions,hardRunsRequested:hardRequested,hardRunsScheduled:0,coachingFocus:'Race preparation',coachingWhy:'Reduced pre-race mileage. No additional hard training or long run in race week.',trainingBalance:{reason:'Race replaces the demanding workout.',planningDemand:0,planningBudget:0},note:'Event mileage is excluded from training miles.'});continue;
   }
   if(postRace){
-   const slots=distribute(Math.min(target,available.length*3),available,available.map(()=>1));
+   // A short race normally needs fewer days off than an ultra. Preserve easy
+   // aerobic consistency after a 5K while removing intensity from the week.
+   const shortOnly=recoveryDays.every(g=>['beginner','short'].includes(g.spec.kind));
+   const slots=distribute(shortOnly?target:Math.min(target,available.length*3),available,available.map(()=>1));
    for(const d of available)sessions[d]=makeSession(wi,d,'Recovery run',slots[d],'Very easy recovery only if fully comfortable and appropriate; no intensity.',{pace:easy?.label||'',targetPaceRange:easy,hrTarget:easyHr});
    out.push({phase,sessions,hardRunsRequested:hardRequested,hardRunsScheduled:0,coachingFocus:'Post-race recovery',coachingWhy:'The prior event is a significant stressor. Recover before resuming the later race build.',trainingBalance:{reason:'Reduced post-race load.',planningDemand:0,planningBudget:0},note:'Race recovery can require more time than this default.'});continue;
   }
@@ -238,7 +283,11 @@ function build(p){
   const fraction=clamp(longRace.spec.longShare+(focus==='endurance'?.03:focus==='speed'?-.04:0),.20,.40);
   const desiredLong=target*fraction;
   const paceSeconds=easy?.slowSeconds||parsePace(p.pace)||660;
-  const timeCapMiles=longRace.spec.longHours*3600/paceSeconds;
+  // Long-run duration guidance can flex with an established base, but does not
+  // grow simply because the athlete typed a huge peak target.
+  const sessionHours=longRace.spec.longHours*(experience==='advanced'&&
+     base>=recommendedLower?1.2:1);
+  const timeCapMiles=sessionHours*3600/paceSeconds;
   const maxSafeShare=available.length<=2?.45:available.length===3?.40:.40;
   const shareLimit=target*maxSafeShare;
   const spikeCeiling=lastLong*1.10+0.1; // cautious SESSION-spike check; NOT a proven universally safe rate.
@@ -249,7 +298,18 @@ function build(p){
   let actualTarget=target;
   // Do not force a giant single run in a 1-day schedule; explain the unallocated target.
   if(!other.length){actualTarget=long;}
-  let allocations=distribute(Math.min(remaining,Math.max(0,other.length)*Math.max(4,Math.min(14,long*.85))),other,other.map(()=>1));
+  // No arbitrary 14-mile cap on ordinary runs. Distribute the ENTIRE remaining
+  // volume over the runner's chosen days when recent single-session exposure
+  // supports it. The daily exposure budget grows with the build (no fixed
+  // absolute maximum); unmet mileage is reported rather than silently lost.
+  const progressedDailyExposure=Math.max(4,base/Math.max(2,capDays)*1.2,
+     typicalOtherBase*Math.pow(1+advanceRate+.025,buildCount+1));
+  // Avoid a supposed "long run" being SHORTER than every normal training day.
+  // This bound follows the actual long run and can grow when evidence supports
+  // a longer duration. It is not an absolute or race-distance mileage cap.
+  const regularDayBudget=Math.min(progressedDailyExposure,Math.max(2,long*.9));
+  const allocatableOther=half(Math.min(remaining,other.length*regularDayBudget));
+  let allocations=distribute(allocatableOther,other,other.map(()=>1));
   const otherAllocated=sum(Object.values(allocations));
   actualTarget=half(long+otherAllocated);
   const lost=half(target-actualTarget);
@@ -308,24 +368,29 @@ function build(p){
    `${longRace.distance} endurance long run + ${finalHard}/${hardRequested} requested quality workout(s); ${nearest.focus} priority, ${experience} experience profile. `+
    `${downWeek?'Lighter week to consolidate training. ':''}${primaryTaper?'Lower running volume before race. ':''}`+
    `${longDemand&&freshness?'Long run carries substantial workload, so additional hard work is limited. ':''}`+
-   `${unsupported?`Requested ${target} mi but ${actualMiles} mi fits this week's days and single-run constraints; add time or days rather than stacking miles.`:'Training load fits the available schedule.'}`;
+   `${unsupported?`This week's ${target} mi target allows ${actualMiles} mi within the available days and recent individual-run exposure; ${(target-actualMiles).toFixed(1)} mi remains unallocated. Consider additional running days or a longer build.`:'Planned mileage fits the available schedule.'}`;
   const balance={planningDemand:Math.round(actualMiles*paceSeconds/60),planningBudget:Math.round(target*paceSeconds/60),plannedMinutes:Math.round(actualMiles*paceSeconds/60),reason:longDemand&&freshness?'Long-duration running already provides a major stimulus; protect easy running.':'Predominantly easy running with limited quality sessions.',note:'Planning estimate only, NOT a measured fatigue score.'};
-  out.push({phase,sessions,hardRunsRequested:hardRequested,hardRunsScheduled:finalHard,coachingFocus:speed?`Speed for ${speed.distance} with ${longRace.distance} endurance`:`${longRace.distance} race-specific endurance`,coachingWhy:why,trainingBalance:balance,note:why});
+  out.push({phase,sessions,unallocatedMiles:lost,weeklyMileageObjective:target,hardRunsRequested:hardRequested,hardRunsScheduled:finalHard,coachingFocus:speed?`Speed for ${speed.distance} with ${longRace.distance} endurance`:`${longRace.distance} race-specific endurance`,coachingWhy:why,trainingBalance:balance,note:why});
  }
  const peakMiles=half(Math.max(...out.map(w=>sum(w.sessions.map(s=>s.miles)))));
  const peakLong=half(Math.max(...out.flatMap(w=>w.sessions.filter(isLong).map(s=>s.miles)),0));
  if(peakMiles<recommendedLower)warnings.push(`Peak ${peakMiles} mi/week falls below the ${recommendedLower}–${recommendedUpper} mi/week coaching reference for your level and goal. This is NOT automatic race readiness. Consider more preparation time, running days, or goal adjustment.`);
- if(preferredPeak!==null&&peakMiles<preferredPeak-1)warnings.push(`Requested peak ${preferredPeak} mi/week, but schedule reaches ${peakMiles}. The engine will not force unsafe catch-up.`);
+ if(preferredPeak!==null&&peakMiles<preferredPeak-1){
+  const cause=theoreticalReachable<preferredPeak-1?
+    `the limited ${totalBuildSteps} build opportunities from current mileage`:
+    'available running days, individual session exposure and long-run duration guidance';
+  warnings.push(`Requested peak ${preferredPeak} mi/week, achieved ${peakMiles} mi/week. Shortfall: ${half(preferredPeak-peakMiles)} mi. Primary limitation: ${cause}. The engine does not force a jump merely to match a number.`);
+ }
  notes.push('Peak reference bands, weekly progression, long-run time caps, and hard-run frequency are editable coaching assumptions, not empirically proven individual thresholds.');
  notes.push('High-level evidence favors mostly easy running, race-specific preparation and tapering. Exact mileage differs widely by individual.');
  notes.push('No clinical risk prediction or guaranteed race-readiness score. Strava data are not used until runner history is explicitly integrated.');
  notes.push('Goal time is aspirational. Workouts are anchored to actual measured race/test performance, not an arbitrary wished-for finish time.');
  const profileGoals=goals.map(g=>({id:g.id,distance:g.distance,focus:g.focus,raceDate:g.raceDate,timeGoal:g.timeGoal||'',distanceGoalMiles:g.distanceGoalMiles||null,goalPace:g.goalPace||null}));
- return {profile:{...p,goal:goals[0].distance,focus:goals[0].focus,raceDate:end,weeks,goals:profileGoals},weeks:out,created:new Date().toISOString(),assessment:{issues:warnings,notes,referencePeakRangeMiles:[recommendedLower,recommendedUpper],referenceBands:bands,peakWeeklyMiles:peakMiles,peakLongRunMiles:peakLong,experienceClassification:experience,preferredPeakWeeklyMiles:preferredPeak,establishedMileage:established,projectedShortfallMiles:preferredPeak!==null?Math.max(0,half(preferredPeak-peakMiles)):null,sourceLinks:SOURCES},adjustmentHistory:[],engineVersion:'one-calendar-freshness-6.2-science-7.1'};
+ return {profile:{...p,goal:goals[0].distance,focus:goals[0].focus,raceDate:end,weeks,goals:profileGoals},weeks:out,created:new Date().toISOString(),assessment:{issues:warnings,notes,referencePeakRangeMiles:[recommendedLower,recommendedUpper],referenceBands:bands,peakWeeklyMiles:peakMiles,peakLongRunMiles:peakLong,experienceClassification:experience,preferredPeakWeeklyMiles:preferredPeak,establishedMileage:established,projectedShortfallMiles:preferredPeak!==null?Math.max(0,half(preferredPeak-peakMiles)):null,volumePlanning:{requestedPeakMiles:preferredPeak,recommendedObjectiveMiles:half(requestedTarget),estimatedProgressionReachMiles:half(theoreticalReachable),buildOpportunities:totalBuildSteps,planningGrowthPerBuild:Math.round(advanceRate*1000)/10,achievedPeakMiles:peakMiles,limitingFactor:preferredPeak!==null&&peakMiles<preferredPeak-1?(theoreticalReachable<preferredPeak-1?'preparation time and current base':'training days / single-run exposure'):null,universalMileageCap:false},sourceLinks:SOURCES},adjustmentHistory:[],engineVersion:'one-calendar-freshness-6.2-science-7.2'};
 }
 // Override only the generation policy. Keep existing V6 validation, approval,
 // adjustment, account and calendar integration exactly as installed.
 previous.build=build;
-root.MileZeroScienceV7={version:'7.1',raceRules:RACE_RULES,sourceLinks:SOURCES,experienceLevel,build};
+root.MileZeroScienceV7={version:'7.2',raceRules:RACE_RULES,sourceLinks:SOURCES,experienceLevel,build};
 if(typeof module!=='undefined'&&module.exports)module.exports=root.MileZeroScienceV7;
 })(typeof window!=='undefined'?window:globalThis);

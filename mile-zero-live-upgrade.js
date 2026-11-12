@@ -57,6 +57,8 @@
 
   // Build a quieter layout by MOVING original form controls, preserving their ids,
   // event listeners, browser validation and the existing saving logic.
+  // Remove the old HTML entry maximum; training volume is assessed relative to history.
+  E('mileage')?.removeAttribute('max');
   const originalGrid=builder.querySelector(':scope > .grid');
   const layout=el('div',{id:'mz-coach-layout'});
   const makeSection=(id,title,description)=>{
@@ -119,9 +121,9 @@
   fitness.grid.appendChild(el('div',{className:'field'},
     '<label for="mz-recent-5k">Recent 5K result / controlled benchmark</label><input id="mz-recent-5k" placeholder="e.g. 27:30"><small class="muted">Required for numeric 5K/10K speed paces. Do not substitute your goal time.</small>'));
   fitness.grid.appendChild(el('div',{className:'field'},
-    '<label for="mz-established-mileage">Established weekly miles (optional)</label><input id="mz-established-mileage" type="number" min="0" max="180" step="0.5" placeholder="e.g. 35"><small class="muted">Only if you sustained this level consistently for 6+ weeks recently, before a short recovery period. The plan still starts at your current comfortable mileage.</small>'));
+    '<label for="mz-established-mileage">Established weekly miles (optional)</label><input id="mz-established-mileage" type="number" min="0" step="0.5" placeholder="e.g. 35"><small class="muted">Only if you sustained this level consistently for 6+ weeks recently, before a short recovery period. The plan still starts at your current comfortable mileage.</small>'));
   training.grid.appendChild(el('div',{className:'field'},
-    '<label for="mz-preferred-peak">Preferred peak weekly miles (optional)</label><input id="mz-preferred-peak" type="number" min="0" max="180" step="0.5" placeholder="e.g. 45"><small class="muted">A training goal, not a guarantee. The coach will show when the available weeks cannot support it.</small>'));
+    '<label for="mz-preferred-peak">Preferred peak weekly miles (optional)</label><input id="mz-preferred-peak" type="number" min="0" step="0.5" placeholder="e.g. 60"><small class="muted">A planning TARGET, never an arbitrary ceiling. Mile Zero works backward from the race and explains any shortfall. Not a guarantee or a forced jump.</small>'));
   advGrid.appendChild(el('div',{className:'field'},'<label for="mz-easy-hr-min">Calibrated easy HR minimum</label><input id="mz-easy-hr-min" type="number" min="60" max="230" placeholder="optional">'));
   advGrid.appendChild(el('div',{className:'field'},'<label for="mz-easy-hr-max">Calibrated easy HR maximum</label><input id="mz-easy-hr-max" type="number" min="60" max="230" placeholder="optional">'));
   advGrid.appendChild(el('div',{className:'field'},'<label for="mz-threshold-hr-min">Calibrated threshold HR minimum</label><input id="mz-threshold-hr-min" type="number" min="60" max="230" placeholder="optional">'));
@@ -245,7 +247,9 @@
     item.innerHTML=`<h3>${esc(w.coachingFocus||'Your weekly training goal')}</h3>
       <p><strong>Why this week:</strong> ${esc(w.coachingWhy||w.note)}</p>
       <p><strong>Quality workouts:</strong> ${Number(w.hardRunsScheduled||0)} of ${Number(w.hardRunsRequested||0)} requested</p>
-      <p><strong>Plan peak:</strong> ${Number(data.assessment?.peakWeeklyMiles||0)} mi/week${data.assessment?.preferredPeakWeeklyMiles!==null&&data.assessment?.preferredPeakWeeklyMiles!==undefined?' (preferred '+Number(data.assessment.preferredPeakWeeklyMiles)+' mi/week)':''}.</p>
+      <p><strong>Planned peak:</strong> ${Number(data.assessment?.peakWeeklyMiles||0)} mi/week${data.assessment?.preferredPeakWeeklyMiles!==null&&data.assessment?.preferredPeakWeeklyMiles!==undefined?' · requested '+Number(data.assessment.preferredPeakWeeklyMiles)+' mi/week':''}.</p>
+      ${data.assessment?.volumePlanning?`<p><strong>Peak planning:</strong> ${data.assessment.volumePlanning.buildOpportunities} build opportunities; estimated progression reach ${data.assessment.volumePlanning.estimatedProgressionReachMiles} mi/week (heuristic, not a safety threshold).</p>`:''}
+      ${data.assessment?.volumePlanning?.limitingFactor?`<p><strong>Why the requested peak was not reached:</strong> ${esc(data.assessment.volumePlanning.limitingFactor)}. Check the plan assessment for details.</p>`:''}
       ${budget?`<p><strong>Training balance:</strong> ${esc(budget.reason)}</p>
         <p class="subtle">Estimated training demand: ${budget.planningDemand} relative planning units; preferred budget ${budget.planningBudget}. These are internal scheduling heuristics, not fatigue or injury scores.</p>`:''}`;
     panel.appendChild(item);

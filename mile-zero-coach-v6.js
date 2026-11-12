@@ -51,9 +51,9 @@ function validate(input){
  const issues=[],p=input||{},goals=p.goals||[];
  if(!validDate(p.startDate)||date(p.startDate).getUTCDay()!==1)issues.push('Plan start must be a Monday.');
  if(!Array.isArray(goals)||goals.length<1||goals.length>2)issues.push('Choose one or two race goals.');
- if(!(Number(p.mileage)>=0&&Number(p.mileage)<=180))issues.push('Enter current weekly mileage between 0 and 180.');
+ if(p.mileage===''||p.mileage==null||!Number.isFinite(Number(p.mileage))||Number(p.mileage)<0)issues.push('Enter a valid nonnegative current weekly mileage.');
  for(const [field,label] of [['establishedMileage','established mileage'],['preferredPeakMiles','preferred peak weekly mileage']]){
-  if(p[field]!==''&&p[field]!=null&&(!Number.isFinite(Number(p[field]))||Number(p[field])<0||Number(p[field])>180))issues.push(`Enter ${label} between 0 and 180, or leave blank.`);
+  if(p[field]!==''&&p[field]!=null&&(!Number.isFinite(Number(p[field]))||Number(p[field])<0))issues.push(`Enter a valid nonnegative ${label}, or leave blank.`);
  }
  if(p.establishedMileage!==''&&p.establishedMileage!=null&&Number(p.establishedMileage)<Number(p.mileage))issues.push('Established mileage should be at least current comfortable weekly mileage; otherwise leave it blank.');
  if(p.preferredPeakMiles!==''&&p.preferredPeakMiles!=null&&Number(p.preferredPeakMiles)<Number(p.mileage))issues.push('Preferred peak should be at least current comfortable weekly mileage; otherwise leave it blank.');
