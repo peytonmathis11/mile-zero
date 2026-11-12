@@ -97,7 +97,26 @@ body{background:linear-gradient(180deg,#E6E2D8 0%,#F0EEE8 55%,#E5E0D5 100%);colo
   <div class="actions"><button type="button" class="btn" onclick="navigate('account')">Create Free Account →</button>
   <button type="button" class="btn light" onclick="navigate('account')">Sign In</button></div>
 </div>
-<div id="homeContent"></div></section>
+<div id="homeContent"></div>
+<section id="recentStravaRuns"
+  class="panel hidden"
+  style="margin-top:18px">
+
+  <div class="eyebrow">MILE Ø / STRAVA SYNC</div>
+
+  <h2 style="margin:10px 0">
+    Recent Strava Runs
+  </h2>
+
+  <p class="subtle">
+    Your miles, automatically imported.
+    You do the running. We'll handle the numbers.
+  </p>
+
+  <div id="stravaRunsList"></div>
+
+</section>
+</section>
 <section id="plans" class="tab hidden">
 <div id="plansContent"></div><div id="integrationCallout" style="margin-top:14px"></div>
 
