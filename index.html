@@ -1232,14 +1232,14 @@ function previewSyncedRunMatch(activityId) {
         source.plan.profile.startDate, wi, di
       );
 
-      if (
-        workoutDate.getFullYear() === runDate.getFullYear() &&
-        workoutDate.getMonth() === runDate.getMonth() &&
-        workoutDate.getDate() === runDate.getDate() &&
-        (session.miles > 0 || session.status === 'done')
-      ) {
-        matches.push({ session, wi, di });
-      }
+     
+if (
+  monday(workoutDate) === monday(runDate) &&
+  (session.miles > 0 || session.status === 'done')
+) {
+  matches.push({ session, wi, di });
+}
+
     });
   });
 
@@ -1267,8 +1267,7 @@ function previewSyncedRunMatch(activityId) {
       · ${Number(run.distance_miles).toFixed(2)} miles
     </p>
     <p class="subtle">
-      Here are the workouts on your selected training schedule
-      for the same date.
+      Choose any workout from this training week to match with your run.
     </p>
     ${content}
     <div class="note" style="margin-top:14px">
