@@ -1204,6 +1204,8 @@ function dashboardHrGuidance(type) {
  host.appendChild(section);
 }
 
+let syncedRunsForMatching = [];
+
 async function loadRecentStravaRuns() {
   const panel = $('recentStravaRuns');
   const list = $('stravaRunsList');
@@ -1220,6 +1222,9 @@ async function loadRecentStravaRuns() {
     );
 
     if (error) throw error;
+    
+syncedRunsForMatching = runs || [];
+
     if (authUser?.id !== userId) return;
 
     if (!runs || runs.length === 0) {
