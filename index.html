@@ -1206,6 +1206,7 @@ function dashboardHrGuidance(type) {
 
 let syncedRunsForMatching = [];
 
+
 function previewSyncedRunMatch(activityId) {
   const run = syncedRunsForMatching.find(
     r => String(r.activity_id) === String(activityId)
@@ -1232,54 +1233,116 @@ function previewSyncedRunMatch(activityId) {
         source.plan.profile.startDate, wi, di
       );
 
-     
-if (
-  monday(workoutDate) === monday(runDate) &&
-  (session.miles > 0 || session.status === 'done')
-) {
-  matches.push({ session, wi, di });
-}
-
+      if (
+        monday(workoutDate) === monday(runDate) &&
+        (Number(session.miles) > 0 || session.status === 'done')
+      ) {
+        matches.push({ session, wi, di, workoutDate });
+      }
     });
   });
 
   const content = matches.length
-    ? matches.map(m => `
-        <div class="session" style="margin-top:10px">
-          <div>
+    ? matches.map((m, i) => `
+        <label class="session"
+          style="display:flex;align-items:center;
+          gap:12px;margin-top:10px;cursor:pointer;
+          padding:14px">
+
+          <input
+            type="radio"
+            name="stravaWorkoutChoice"
+            value="${i}"
+            style="width:18px;height:18px;flex-shrink:0"
+          >
+
+          <div id="stravaWorkoutOption${i}">
             <strong>${esc(m.session.type)}</strong>
+
             <div class="sub">
-              ${m.session.miles} mi planned ·
+              ${m.workoutDate.toLocaleDateString('en-US', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric'
+              })}
+              · ${Number(m.session.miles) || 0} mi planned
+            </div>
+
+            <div class="sub">
               ${m.session.status === 'done'
                 ? 'Already completed'
-                : 'Available to match'}
+                : 'Scheduled'}
             </div>
           </div>
-        </div>
+        </label>
       `).join('')
-    : '<p>No scheduled running workouts found on this date.</p>';
+    : '<p>No scheduled running workouts found during this training week.</p>';
 
   modal(`
-    <div class="eyebrow">MILE Ø / WORKOUT MATCHING</div>
-    <h2 style="margin-top:12px">Match your run</h2>
+    <div class="eyebrow">
+      MILE Ø / WORKOUT MATCHING
+    </div>
+
+    <h2 style="margin-top:12px">
+      Match your run
+    </h2>
+
     <p>
       <strong>${esc(run.activity_name || 'Synced run')}</strong>
       · ${Number(run.distance_miles).toFixed(2)} miles
     </p>
+
     <p class="subtle">
-      Choose any workout from this training week to match with your run.
+      Choose any scheduled workout from the same
+      Monday–Sunday training week.
     </p>
+
     ${content}
-    <div class="note" style="margin-top:14px">
-      Preview only. No workouts have been changed.
+
+    <div id="stravaMatchReview"
+      class="note"
+      style="margin-top:14px">
+      Select a workout to review your choice.
+      Nothing will be saved yet.
     </div>
-    <div class="actions">
-      <button class="btn light" onclick="closeModal()">
+
+    <div class="actions" style="margin-top:14px">
+      ${matches.length ? `
+        <button
+          class="btn dark"
+          type="button"
+          onclick="
+            const choice = document.querySelector(
+              'input[name=stravaWorkoutChoice]:checked'
+            );
+            if (!choice) {
+              toast('Choose a workout first.');
+            } else {
+              const workout = document.getElementById(
+                'stravaWorkoutOption' + choice.value
+              );
+              document.getElementById(
+                'stravaMatchReview'
+              ).textContent =
+                'Selected: ' + workout.textContent.trim()
+                .replace(/\\s+/g, ' ') +
+                '. Preview only — no changes saved.';
+            }
+          ">
+          Review Selection
+        </button>
+      ` : ''}
+
+      <button
+        class="btn light"
+        type="button"
+        onclick="closeModal()">
         Close
       </button>
     </div>
   `);
 }
+
 
 async function loadRecentStravaRuns() {
   const panel = $('recentStravaRuns');
