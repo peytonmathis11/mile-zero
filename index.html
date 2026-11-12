@@ -2054,4 +2054,9 @@ $('exportBtn').onclick=exportCSV;$('backupBtn').onclick=backup;$('importBtn').on
 if(load()){selectedWeek=todayIndex();render()}else{setProfile(baseProfile());render()}
 window.addEventListener('DOMContentLoaded',initAuth);
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
-</script></body></html>
+
+</script>
+<script src="./previous-runs.js" defer></script>
+</body>
+</html>
+
