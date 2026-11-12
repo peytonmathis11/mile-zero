@@ -1348,14 +1348,203 @@ function previewSyncedRunMatch(activityId) {
         </button>
       ` : ''}
 
-      <button
-        class="btn light"
-        type="button"
-        onclick="closeModal()">
-        Close
-      </button>
+      
+<button
+  class="btn dark"
+  type="button"
+  onclick="reviewStravaSelection(${Number(run.activity_id)})">
+  Review Selection
+</button>
+
     </div>
   `);
+}
+
+function stravaMatchOptions(run, source) {
+  const runDate = new Date(run.activity_date);
+  const matches = [];
+
+  if (Number.isNaN(runDate.getTime())) return matches;
+
+  source.plan.weeks.forEach((week, wi) => {
+    week.sessions.forEach((session, di) => {
+      const workoutDate = dateAt(
+        source.plan.profile.startDate, wi, di
+      );
+
+      if (
+        monday(workoutDate) === monday(runDate) &&
+        (Number(session.miles) > 0 ||
+         session.status === 'done')
+      ) {
+        matches.push({ session, wi, di, workoutDate });
+      }
+    });
+  });
+
+  return matches;
+}
+
+function reviewStravaSelection(activityId) {
+  const choice = document.querySelector(
+    'input[name="stravaWorkoutChoice"]:checked'
+  );
+
+  if (!choice) {
+    toast('Choose a workout first.');
+    return;
+  }
+
+  const run = syncedRunsForMatching.find(
+    r => String(r.activity_id) === String(activityId)
+  );
+  const source = dashboardScheduleSource();
+
+  if (!run || !source?.plan) {
+    toast('Run or training plan not found.');
+    return;
+  }
+
+  const matches = stravaMatchOptions(run, source);
+  const selected = matches[Number(choice.value)];
+
+  if (!selected) {
+    toast('Workout selection changed. Try again.');
+    return;
+  }
+
+  const panel = document.getElementById('stravaMatchReview');
+  if (!panel) return;
+
+  const miles = Number(run.distance_miles);
+  const planned = Number(selected.session.miles);
+  const pace = Number(run.average_pace_seconds_per_mile);
+  const hr = Number(run.average_heart_rate);
+
+  const paceText = Number.isFinite(pace) && pace > 0
+    ? Math.floor(Math.round(pace) / 60) + ':' +
+      String(Math.round(pace) % 60).padStart(2, '0')
+    : 'Unavailable';
+
+  panel.innerHTML = `
+    <strong>Ready to match</strong>
+    <p style="margin:8px 0">
+      Workout: ${esc(selected.session.type)}
+    </p>
+    <p style="margin:8px 0">
+      Planned: ${planned} mi
+      · Actual: ${miles.toFixed(2)} mi
+    </p>
+    <p style="margin:8px 0">
+      Pace: ${paceText}/mi
+      · HR: ${hr > 0 ? Math.round(hr) + ' bpm' : 'Unavailable'}
+    </p>
+    <p class="subtle">
+      Your planned workout will remain unchanged.
+      Confirming will save the actual run to your training log.
+    </p>
+  `;
+
+  const button = document.createElement('button');
+  button.className = 'btn dark';
+  button.type = 'button';
+  button.textContent = 'Confirm Match';
+  button.style.marginTop = '10px';
+
+  button.onclick = () => {
+    saveStravaSelection(activityId, Number(choice.value));
+  };
+
+  panel.appendChild(button);
+}
+
+function saveStravaSelection(activityId, selectedIndex) {
+  if (!requireAccount()) return;
+
+  const run = syncedRunsForMatching.find(
+    r => String(r.activity_id) === String(activityId)
+  );
+  const source = dashboardScheduleSource();
+
+  if (!run || !source?.plan) {
+    toast('Run or training plan not found.');
+    return;
+  }
+
+  const matches = stravaMatchOptions(run, source);
+  const selected = matches[selectedIndex];
+
+  if (!selected) {
+    toast('Workout not found. Please try again.');
+    return;
+  }
+
+  const session = source.plan.weeks[selected.wi]
+    ?.sessions[selected.di];
+
+  if (!session || session.status !== 'planned') {
+    toast('This workout already has a log. Nothing changed.');
+    return;
+  }
+
+  const id = String(activityId);
+
+  const allPlans = portfolio.plans.map(p => p.plan);
+
+  if (portfolio.integratedPlan?.plan) {
+    allPlans.push(portfolio.integratedPlan.plan);
+  }
+
+  const alreadyMatched = allPlans.some(plan =>
+    plan.weeks.some(week =>
+      week.sessions.some(s =>
+        String(s.stravaActivityId || '') === id
+      )
+    )
+  );
+
+  if (alreadyMatched) {
+    toast('This Strava run is already matched to a workout.');
+    return;
+  }
+
+  const miles = Number(run.distance_miles);
+  const paceSeconds =
+    Number(run.average_pace_seconds_per_mile);
+  const hr = Number(run.average_heart_rate);
+
+  if (!Number.isFinite(miles) || miles <= 0 || miles > 150) {
+    toast('Strava distance is invalid. Nothing saved.');
+    return;
+  }
+
+  const pace = Number.isFinite(paceSeconds) &&
+    paceSeconds > 0
+    ? Math.floor(Math.round(paceSeconds) / 60) +
+      ':' +
+      String(Math.round(paceSeconds) % 60).padStart(2, '0')
+    : '';
+
+  const validHr =
+    Number.isInteger(hr) && hr >= 40 && hr <= 240
+      ? hr
+      : null;
+
+  Object.assign(session, {
+    status: 'done',
+    actual: Math.round(miles * 100) / 100,
+    actualPace: pace,
+    averageHr: validHr,
+    stravaActivityId: id,
+    stravaActivityDate: run.activity_date,
+    stravaActivityName: run.activity_name || 'Strava run'
+  });
+
+  save();
+  closeModal();
+  render();
+
+  toast('Strava run matched! Workout log updated.');
 }
 
 
