@@ -1366,63 +1366,6 @@ syncedRunsForMatching = runs || [];
   }
 }
 
-async function loadRecentStravaRuns() {
-  const panel = $('recentStravaRuns');
-  const list = $('stravaRunsList');
-
-  if (!panel || !list || !supa || !authUser) return;
-
-  panel.classList.remove('hidden');
-  list.textContent = 'Loading your synced runs...';
-
-  try {
-    const { data: runs, error } =
-      await supa.rpc('strava_my_activities');
-
-    if (error) throw error;
-
-    if (!runs || runs.length === 0) {
-      list.textContent = 'No synced runs yet.';
-      return;
-    }
-
-    list.innerHTML = runs.map(run => {
-      const miles = Number(run.distance_miles);
-      const pace = Number(run.average_pace_seconds_per_mile);
-      const hr = Number(run.average_heart_rate);
-
-      const paceText = pace > 0
-        ? Math.floor(Math.round(pace) / 60) + ':' +
-          String(Math.round(pace) % 60).padStart(2, '0') + '/mi'
-        : 'Pace unavailable';
-
-      const date = new Date(run.activity_date);
-      const dateText = isNaN(date.getTime())
-        ? 'Date unavailable'
-        : date.toLocaleDateString('en-US');
-
-      return `
-        <div class="session" style="margin-top:10px">
-          <div>
-            <div class="name">${esc(run.activity_name || 'Run')}</div>
-            <div class="sub">${esc(dateText)} · Strava</div>
-            <p>
-              ${Number.isFinite(miles) ? miles.toFixed(2) : '—'} mi
-              · ${paceText}
-              · ${hr > 0 ? Math.round(hr) + ' bpm' : 'No HR'}
-            </p>
-          </div>
-          <span class="pill">Synced</span>
-        </div>
-      `;
-    }).join('');
-
-  } catch (error) {
-    console.error('Synced Runs:', error);
-    list.textContent = 'Could not load synced runs.';
-  }
-}
-
 function render(){renderTrends();updateAccountUI();if(data)setProfile(data.profile);else setProfile(baseProfile());renderHome();renderDashboardTrainingWeek();renderPlan();renderProgress();renderPlans();renderCalendarCombined();renderIntegration();renderCalendarModeSelector();renderRunnerProfile();renderSavedTrainingCity()}
 function displayPlanName(){
   if(!data)return '';
