@@ -1343,7 +1343,17 @@ syncedRunsForMatching = runs || [];
               · ${hr > 0 ? Math.round(hr) + ' bpm' : 'No HR'}
             </p>
           </div>
-          <span class="pill">Synced</span>
+          
+<div class="actions">
+  <span class="pill">Synced</span>
+  <button
+    class="btn dark sm"
+    type="button"
+    onclick="previewSyncedRunMatch(${Number(run.activity_id)})">
+    Match to Workout
+  </button>
+</div>
+
         </div>
       `;
     }).join('');
