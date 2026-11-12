@@ -1204,6 +1204,77 @@ function dashboardHrGuidance(type) {
  host.appendChild(section);
 }
 
+async function loadRecentStravaRuns() {
+  const panel = $('recentStravaRuns');
+  const list = $('stravaRunsList');
+
+  if (!panel || !list || !supa || !authUser) return;
+
+  const userId = authUser.id;
+  panel.classList.remove('hidden');
+  list.innerHTML = '<p class="subtle">Loading your synced runs...</p>';
+
+  try {
+    const { data: runs, error } = await supa.rpc(
+      'strava_my_activities'
+    );
+
+    if (error) throw error;
+    if (authUser?.id !== userId) return;
+
+    if (!runs || runs.length === 0) {
+      list.innerHTML =
+        '<p class="subtle">No synced runs yet.</p>';
+      return;
+    }
+
+    list.innerHTML = runs.map(run => {
+      const date = new Date(run.activity_date);
+      const dateText = Number.isNaN(date.getTime())
+        ? 'Unknown date'
+        : date.toLocaleDateString('en-US', {
+            month: '2-digit',
+            day: '2-digit',
+            year: 'numeric'
+          });
+
+      const miles = Number(run.distance_miles);
+      const pace = Number(run.average_pace_seconds_per_mile);
+      const hr = Number(run.average_heart_rate);
+
+      const paceText = pace > 0
+        ? Math.floor(Math.round(pace) / 60) + ':' +
+          String(Math.round(pace) % 60).padStart(2, '0') + '/mi'
+        : 'No pace';
+
+      return `
+        <div class="session" style="margin-top:10px">
+          <div>
+            <div class="name">
+              ${esc(run.activity_name || 'Synced run')}
+            </div>
+            <div class="sub">
+              ${esc(dateText)} · Strava
+            </div>
+            <p style="margin:8px 0 0;font-size:13px">
+              ${Number.isFinite(miles) ? miles.toFixed(2) : '—'} miles
+              · ${paceText}
+              · ${hr > 0 ? Math.round(hr) + ' bpm' : 'No HR'}
+            </p>
+          </div>
+          <span class="pill">Synced</span>
+        </div>
+      `;
+    }).join('');
+
+  } catch (error) {
+    if (authUser?.id !== userId) return;
+    console.error('Synced runs error:', error);
+    list.innerHTML =
+      '<p class="subtle">Could not load synced runs.</p>';
+  }
+}
+
 function render(){renderTrends();updateAccountUI();if(data)setProfile(data.profile);else setProfile(baseProfile());renderHome();renderDashboardTrainingWeek();renderPlan();renderProgress();renderPlans();renderCalendarCombined();renderIntegration();renderCalendarModeSelector();renderRunnerProfile();renderSavedTrainingCity()}
 function displayPlanName(){
   if(!data)return '';
