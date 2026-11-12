@@ -118,6 +118,10 @@
     '<input id="mz-freshness" type="checkbox" checked><span><strong>Freshness-first coaching</strong><br>Protect easy days and reduce hard workouts when the week already contains a demanding long run. Recommended.</span>'));
   fitness.grid.appendChild(el('div',{className:'field'},
     '<label for="mz-recent-5k">Recent 5K result / controlled benchmark</label><input id="mz-recent-5k" placeholder="e.g. 27:30"><small class="muted">Required for numeric 5K/10K speed paces. Do not substitute your goal time.</small>'));
+  fitness.grid.appendChild(el('div',{className:'field'},
+    '<label for="mz-established-mileage">Established weekly miles (optional)</label><input id="mz-established-mileage" type="number" min="0" max="180" step="0.5" placeholder="e.g. 35"><small class="muted">Only if you sustained this level consistently for 6+ weeks recently, before a short recovery period. The plan still starts at your current comfortable mileage.</small>'));
+  training.grid.appendChild(el('div',{className:'field'},
+    '<label for="mz-preferred-peak">Preferred peak weekly miles (optional)</label><input id="mz-preferred-peak" type="number" min="0" max="180" step="0.5" placeholder="e.g. 45"><small class="muted">A training goal, not a guarantee. The coach will show when the available weeks cannot support it.</small>'));
   advGrid.appendChild(el('div',{className:'field'},'<label for="mz-easy-hr-min">Calibrated easy HR minimum</label><input id="mz-easy-hr-min" type="number" min="60" max="230" placeholder="optional">'));
   advGrid.appendChild(el('div',{className:'field'},'<label for="mz-easy-hr-max">Calibrated easy HR maximum</label><input id="mz-easy-hr-max" type="number" min="60" max="230" placeholder="optional">'));
   advGrid.appendChild(el('div',{className:'field'},'<label for="mz-threshold-hr-min">Calibrated threshold HR minimum</label><input id="mz-threshold-hr-min" type="number" min="60" max="230" placeholder="optional">'));
@@ -163,6 +167,8 @@
     p.volumePreference=value('mz-volume')||'steady';
     p.freshnessFirst=E('mz-freshness').checked;
     p.recent5kTime=value('mz-recent-5k');
+    p.establishedMileage=value('mz-established-mileage');
+    p.preferredPeakMiles=value('mz-preferred-peak');
     p.easyHrMin=value('mz-easy-hr-min');p.easyHrMax=value('mz-easy-hr-max');
     p.thresholdHrMin=value('mz-threshold-hr-min');p.thresholdHrMax=value('mz-threshold-hr-max');
     p.raceDate=goals.map(g=>g.raceDate).sort().at(-1)||firstDate;
@@ -185,6 +191,8 @@
     E('mz-volume').value=p.volumePreference||'steady';
     E('mz-freshness').checked=p.freshnessFirst!==false;
     E('mz-recent-5k').value=p.recent5kTime||'';
+    E('mz-established-mileage').value=p.establishedMileage??'';
+    E('mz-preferred-peak').value=p.preferredPeakMiles??'';
     E('mz-easy-hr-min').value=p.easyHrMin||'';E('mz-easy-hr-max').value=p.easyHrMax||'';
     E('mz-threshold-hr-min').value=p.thresholdHrMin||'';E('mz-threshold-hr-max').value=p.thresholdHrMax||'';
     setSecond(currentGoals.length===2);
@@ -237,6 +245,7 @@
     item.innerHTML=`<h3>${esc(w.coachingFocus||'Your weekly training goal')}</h3>
       <p><strong>Why this week:</strong> ${esc(w.coachingWhy||w.note)}</p>
       <p><strong>Quality workouts:</strong> ${Number(w.hardRunsScheduled||0)} of ${Number(w.hardRunsRequested||0)} requested</p>
+      <p><strong>Plan peak:</strong> ${Number(data.assessment?.peakWeeklyMiles||0)} mi/week${data.assessment?.preferredPeakWeeklyMiles!==null&&data.assessment?.preferredPeakWeeklyMiles!==undefined?' (preferred '+Number(data.assessment.preferredPeakWeeklyMiles)+' mi/week)':''}.</p>
       ${budget?`<p><strong>Training balance:</strong> ${esc(budget.reason)}</p>
         <p class="subtle">Estimated training demand: ${budget.planningDemand} relative planning units; preferred budget ${budget.planningBudget}. These are internal scheduling heuristics, not fatigue or injury scores.</p>`:''}`;
     panel.appendChild(item);

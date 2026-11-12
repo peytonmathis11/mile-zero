@@ -52,6 +52,11 @@ function validate(input){
  if(!validDate(p.startDate)||date(p.startDate).getUTCDay()!==1)issues.push('Plan start must be a Monday.');
  if(!Array.isArray(goals)||goals.length<1||goals.length>2)issues.push('Choose one or two race goals.');
  if(!(Number(p.mileage)>=0&&Number(p.mileage)<=180))issues.push('Enter current weekly mileage between 0 and 180.');
+ for(const [field,label] of [['establishedMileage','established mileage'],['preferredPeakMiles','preferred peak weekly mileage']]){
+  if(p[field]!==''&&p[field]!=null&&(!Number.isFinite(Number(p[field]))||Number(p[field])<0||Number(p[field])>180))issues.push(`Enter ${label} between 0 and 180, or leave blank.`);
+ }
+ if(p.establishedMileage!==''&&p.establishedMileage!=null&&Number(p.establishedMileage)<Number(p.mileage))issues.push('Established mileage should be at least current comfortable weekly mileage; otherwise leave it blank.');
+ if(p.preferredPeakMiles!==''&&p.preferredPeakMiles!=null&&Number(p.preferredPeakMiles)<Number(p.mileage))issues.push('Preferred peak should be at least current comfortable weekly mileage; otherwise leave it blank.');
  if(!(Number.isInteger(+p.days)&&+p.days>=2&&+p.days<=7))issues.push('Choose 2–7 available days (one rest day is retained).');
  if(!(Number.isInteger(+p.longday)&&+p.longday>=0&&+p.longday<=6))issues.push('Select a long-run day.');
  if(p.hardRuns!==undefined&&(!Number.isInteger(Number(p.hardRuns))||Number(p.hardRuns)<0||Number(p.hardRuns)>2))issues.push('Choose 0, 1 or 2 hard runs per week.');
@@ -160,12 +165,18 @@ function build(input){
  const volumePreference=p.volumePreference||'steady';
  const freshnessFirst=p.freshnessFirst!==false;
  const hardRunsRequested=p.hardRuns===undefined?1:Number(p.hardRuns);
- const baselineGrowth=returning?.02:variable?.025:novice?.03:p.experience==='advanced'?.045:.04;
- // Adjustable preference, not a universal safe growth rate. All build rates still require athlete review.
- const growth=baselineGrowth*(volumePreference==='gradual'?.7:volumePreference==='progressive'?1.15:1);
- // Provisional ceiling prevents a long calendar from mechanically doubling mileage. Not a verified safe threshold.
+ // No fixed 1.55x starting-mileage cap: starting mileage can reflect a recovery period.
+ // Weekly progression is still controlled, and any desired peak must be earned through
+ // a plausible build. None of the rates below are validated safety thresholds.
  const includesLongRace=goals.some(g=>['marathon','ultra','timed'].includes(g.event.kind));
- const peakCeiling=firstBase*(includesLongRace?1.55:1.45);
+ const baselineGrowth=returning?.02:variable?.025:novice?.03:p.experience==='advanced'?(includesLongRace?.055:.045):includesLongRace?.05:.04;
+ const growth=baselineGrowth*(volumePreference==='gradual'?.7:volumePreference==='progressive'?1.15:1);
+ const established= p.establishedMileage===''||p.establishedMileage==null?null:Number(p.establishedMileage);
+ const preferredPeak= p.preferredPeakMiles===''||p.preferredPeakMiles==null?null:Number(p.preferredPeakMiles);
+ // Previous consistent training is only a context signal, never permission to leap
+ // immediately to an old peak. A returning/inconsistent runner cannot accelerate rebuilding.
+ const reportedEstablishedContext=p.consistency==='steady'&&p.experience==='advanced'&&established!==null&&established>firstBase;
+ const rebuildingGrowth=reportedEstablishedContext?Math.min(.08,growth+.02):growth;
 
  const warnings=[],notes=[];
  if(goals.some(g=>['ultra','timed'].includes(g.event.kind))&&base<20)warnings.push('Recent mileage is low for the requested ultra-distance goal; more foundation training or a later race may be necessary.');
@@ -189,7 +200,9 @@ function build(input){
   notes.push(`${g.distance} goal of ${g.distanceGoalMiles} miles requires an average of ${g.timedAveragePace}/mi across the event including stops; this is not a prescribed training-run pace.`);
  }
  notes.push('Freshness-first mode includes an explainable weekly training-stress planning budget; it is not a validated recovery or injury-risk score.');
- notes.push('Volume preference changes progression rate, not hard-workout frequency. Projected mileage is capped relative to reported current training because longer calendars should not mechanically create extreme peaks. The ceiling is an unvalidated planning safeguard, not an individual safety threshold.');
+ notes.push('Volume preference changes progression rate, not hard-workout frequency. There is no fixed peak multiplier; the plan starts from current mileage and increases only through eligible build weeks. The selected peak is a preference, not an instruction to force unsafe increases.');
+ if(reportedEstablishedContext)notes.push(`Previously consistent mileage of ${established} mi/week was reported. Start at current ${firstBase} mi/week and rebuild toward the former base in measured steps; this does not automatically restore old fitness.`);
+ if(preferredPeak!==null)notes.push(`Preferred peak is ${preferredPeak} mi/week, subject to the actual training window and progression checks.`);
  notes.push('All training targets are modifiable coaching heuristics, not validated injury-free limits. No race-time or finishing guarantee.');
  notes.push('Goal race pace is aspirational; training paces come from a recent 5K performance, not the requested finish time. Refresh the benchmark after a new verified race/test result. Heart-rate ranges are used only when measured and supplied.');
  let anchor=firstBase,peak=firstBase,buildWeeks=0;
@@ -220,9 +233,12 @@ function build(input){
   else if(shortTaper){target=anchor*.82}
   else if(taper){const weeksLeft=Math.ceil((nextDays+1)/7);target=anchor*(weeksLeft<=1?.5:weeksLeft===2?.7:.84)}
   else if(recoveryWeek){target=anchor*.78}
-  else {if(wi>0)anchor*=1+growth;target=anchor;buildWeeks++}
+  else {if(wi>0)anchor*=1+(reportedEstablishedContext&&anchor<established?rebuildingGrowth:growth);target=anchor;buildWeeks++}
   if(base===0){target=Math.min(12,2.5+buildWeeks*.8);if(phase==='Recovery')target*=.8;if(['Race week','Taper'].includes(phase))target=Math.min(target,peak*.7);if(phase==='Build'||phase==='Foundation')anchor=target}
-  if(phase==='Build'||phase==='Foundation'||phase==='Race-specific')target=Math.min(target,peakCeiling);
+  if(preferredPeak!==null){anchor=Math.min(anchor,preferredPeak);target=Math.min(target,preferredPeak)}
+  // Respect an athlete's optional desired peak as a soft ceiling, but never
+  // inflate a week to reach it. Flag aspirations that exceed feasible progression.
+  if(['Build','Foundation','Race-specific'].includes(phase)&&preferredPeak!==null)target=Math.min(target,preferredPeak);
   target=half(target);
   if(!['Recovery','Taper','Race week','Post-race recovery'].includes(phase))peak=Math.max(peak,target);
   const sessions=WD.map((_,d)=>slot(wi,d));
@@ -367,9 +383,11 @@ function build(input){
  }
  const maxLong=Math.max(...out.flatMap(w=>w.sessions.filter(s=>s.type==='Long run').map(s=>s.miles)),0);
  const maxWeek=Math.max(...out.map(w=>sum(w.sessions.map(s=>s.miles))));
+ if(preferredPeak!==null&&maxWeek<preferredPeak-1)warnings.push(`You requested a ${preferredPeak}-mile peak, but the calendar currently supports about ${maxWeek} miles. Do not force the difference into a short build; review the true recent training base, race date, available days and goals.`);
  if(goals.some(g=>['ultra','timed'].includes(g.event.kind))&&maxWeek<35)warnings.push(`Projected peak is ${maxWeek} mi/week and longest run ${maxLong} mi. Race preparation may be insufficient; do not force mileage increases just to reach a target.`);
+ if(goals.some(g=>['ultra','timed'].includes(g.event.kind))&&maxWeek>=35)notes.push(`The proposed peak of ${maxWeek} mi/week is not a race-readiness guarantee. Review training history, long-run duration, terrain, fueling and recovery.`);
  if(goals.some(g=>g.distance==='50K')&&maxLong<20)warnings.push(`Longest scheduled 50K preparation run is ${maxLong} mi. Review your recent long-run history, weekly volume, time on feet and race demands rather than treating this as an automatic pass/fail.`);
- return {profile:{...p,hardRuns:hardRunsRequested,volumePreference,freshnessFirst,goal:goals[0].distance,focus:goals[0].focus,raceDate:last,weeks:weeksCount,goals:goals.map(g=>({id:g.id,distance:g.distance,focus:g.focus,raceDate:g.raceDate,timeGoal:g.timeGoal||'',distanceGoalMiles:g.distanceGoalMiles||null,goalPace:formatPace(g.goalPaceSeconds),timedAveragePace:g.timedAveragePace||null}))},weeks:out,created:new Date().toISOString(),assessment:{issues:warnings,notes,peakWeeklyMiles:maxWeek,peakLongRunMiles:maxLong},adjustmentHistory:[],engineVersion:'one-calendar-freshness-6.0'};
+ return {profile:{...p,hardRuns:hardRunsRequested,volumePreference,freshnessFirst,goal:goals[0].distance,focus:goals[0].focus,raceDate:last,weeks:weeksCount,goals:goals.map(g=>({id:g.id,distance:g.distance,focus:g.focus,raceDate:g.raceDate,timeGoal:g.timeGoal||'',distanceGoalMiles:g.distanceGoalMiles||null,goalPace:formatPace(g.goalPaceSeconds),timedAveragePace:g.timedAveragePace||null}))},weeks:out,created:new Date().toISOString(),assessment:{issues:warnings,notes,peakWeeklyMiles:maxWeek,peakLongRunMiles:maxLong,preferredPeakWeeklyMiles:preferredPeak,establishedMileage:established,projectedShortfallMiles:preferredPeak!==null?Math.max(0,half(preferredPeak-maxWeek)):null},adjustmentHistory:[],engineVersion:'one-calendar-freshness-6.1'};
 }
 // Completed-run signals: race/interval splits for speed, full-run pace and average HR
 // for easy work. Whole-session pace cannot measure fast intervals plus warmup/recovery.
@@ -442,6 +460,6 @@ function applyApproved(plan,recommendation,today){
  week.note+=` Runner-approved ${recommendation.type==='progress'?'small progression':'recovery adjustment'}.`;
  return {plan:copy,changedWeek:nextIndex+1};
 }
-root.MileZeroCoachV6={version:'one-calendar-freshness-6.0',distances:Object.keys(SPECS),validate,build,advise,applyApproved,parseGoalTime,formatPace};
+root.MileZeroCoachV6={version:'one-calendar-freshness-6.1',distances:Object.keys(SPECS),validate,build,advise,applyApproved,parseGoalTime,formatPace};
 if(typeof module!=='undefined'&&module.exports)module.exports=root.MileZeroCoachV6;
 })(typeof window!=='undefined'?window:globalThis);
