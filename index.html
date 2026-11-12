@@ -136,7 +136,11 @@ body{background:linear-gradient(180deg,#E6E2D8 0%,#F0EEE8 55%,#E5E0D5 100%);colo
           <p class="subtle">Email confirmation may be required before you can sign in.</p>
       </div>
       <div id="authSignedIn" class="hidden"><p>Signed in as <strong id="accountEmail"></strong></p>
-        <div class="actions"><button type="button" class="btn dark" id="cloudSaveBtn">Save to cloud now</button><button type="button" class="btn light" id="cloudLoadBtn">Load cloud copy</button><button type="button" class="btn light" id="guestImportBtn">Copy guest plan into account</button><button type="button" class="btn outline" id="signOutBtn">Sign out</button></div>
+        <div class="actions"><button type="button" class="btn dark" id="cloudSaveBtn">Save to cloud now</button><button type="button" class="btn light" id="cloudLoadBtn">Load cloud copy</button><button type="button" class="btn light" id="guestImportBtn">Copy guest plan into account</button><button type="button" class="btn outline" id="signOutBtn">Sign out</button>
+<button type="button" class="btn light" id="connectStravaBtn">
+  Connect Strava
+</button>
+</div>
         <p class="subtle" id="syncStatus" role="status">Account connected. Checking cloud data...</p>
       </div>
       <div class="note" style="margin-top:14px" id="authSetupNote">Accounts need a one-time Supabase setup before they will work. Training plans still work locally without signing in.</div>
@@ -1423,6 +1427,38 @@ async function initAuth(){
 $('authForm').onsubmit=e=>{e.preventDefault();doAuth('signIn')};
 $('signUpBtn').onclick=()=>doAuth('signUp');
 $('signOutBtn').onclick=signOut;
+  
+$('connectStravaBtn').onclick = async () => {
+  if (!supa || !authUser) {
+    toast('Please sign in first.');
+    return;
+  }
+
+  const btn = $('connectStravaBtn');
+  btn.disabled = true;
+  btn.textContent = 'Connecting...';
+
+  try {
+    const { data, error } = await supa.functions.invoke(
+      'strava-connect',
+      { body: {} }
+    );
+
+    if (error) throw error;
+
+    if (!data?.authorization_url) {
+      throw new Error('No authorization URL returned');
+    }
+
+    window.location.assign(data.authorization_url);
+  } catch (error) {
+    console.error('Strava connection error:', error);
+    toast('Could not connect to Strava. Please try again.');
+    btn.disabled = false;
+    btn.textContent = 'Connect Strava';
+  }
+};
+
 $('cloudSaveBtn').onclick=()=>saveCloud(true);
 $('cloudLoadBtn').onclick=()=>loadCloud(true);
 $('guestImportBtn').onclick=importGuest;
