@@ -2,7 +2,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#18221C"><meta name="description" content="Mile Zero: adaptive running plans for every distance."><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg" type="image/svg+xml"><title>MILE Ø — Earn Your Distance</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&display=swap');
+@import uƒrl('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&display=swap');
 
 
 .hero h1 {
@@ -1725,7 +1725,53 @@ function deleteWorkoutLog(wi, di, integrated = false) {
   toast('Run deleted. Planned workout kept.');
 }
 
-function openLog(wi,di){if(!requireAccount())return;let s=data.weeks[wi].sessions[di];modal(`<h2>Log your ${esc(s.day)} run</h2><p class="subtle">Planned: ${esc(sessionSummary(s))}. Record what actually happened so training recommendations have real data.</p><form id="logForm"><div class="grid"><div class="field"><label>Workout status</label><select id="logStatus"><option value="done" ${s.status==='done'?'selected':''}>Completed</option><option value="missed" ${s.status==='missed'?'selected':''}>Missed / skipped</option><option value="planned" ${s.status==='planned'?'selected':''}>Not logged yet</option></select></div><div class="field"><label>Actual distance (miles)</label><input id="logActual" type="number" min="0" max="150" step="0.1" value="${s.actual??s.miles}"></div><div class="field"><label>Actual average pace (mm:ss / mile)</label><input id="logPace" placeholder="10:15" value="${esc(s.actualPace||'')}"></div><div class="field"><label>Average heart rate (bpm)</label><input id="logHr" type="number" min="40" max="240" placeholder="Optional" value="${s.averageHr??''}"></div><div class="field"><label>Effort (RPE 1 = easy, 10 = max)</label><select id="logRpe"><option value="">Not sure</option>${Array.from({length:10},(_,i)=>`<option ${s.rpe===i+1?'selected':''}>${i+1}</option>`).join('')}</select></div><div class="field"><label>Fatigue today</label><select id="logFatigue"><option value="">Not sure</option>${['low','moderate','high'].map(x=>`<option ${s.fatigue===x?'selected':''} value="${x}">${x}</option>`).join('')}</select></div></div><div style="margin-top:14px"><label><input id="logPain" type="checkbox" ${s.pain?'checked':''}> Pain or injury concern during/after this session</label></div><div class="field" style="margin-top:12px"><label>How did it feel?</label><textarea id="logNotes" placeholder="Hot, hilly, hard breathing, recovery felt great...">${esc(s.notes||'')}</textarea></div><div class="actions"><button class="btn dark" type="submit">Save run and review</button><button class="btn light" type="button" onclick="closeModal()"
+function deleteWorkoutLog(wi, di) {
+  if (!requireAccount()) return;
+
+  const session = data?.weeks?.[wi]?.sessions?.[di];
+
+  if (!session) {
+    toast('Workout not found.');
+    return;
+  }
+
+  if (!confirm(
+    'Delete this run log? Your planned workout will stay.'
+  )) return;
+
+  session.status = 'planned';
+
+  [
+    'actual', 'actualPace', 'averageHr',
+    'rpe', 'fatigue', 'pain', 'notes',
+    'stravaActivityId', 'stravaActivityDate',
+    'stravaActivityName'
+  ].forEach(key => delete session[key]);
+
+  save();
+  closeModal();
+  render();
+
+  toast('Run log deleted. Workout plan preserved.');
+}
+
+function openLog(wi,di){if(!requireAccount())return;let s=data.weeks[wi].sessions[di];modal(`<h2>Log your ${esc(s.day)} run</h2><p class="subtle">Planned: ${esc(sessionSummary(s))}. Record what actually happened so training recommendations have real data.</p><form id="logForm"><div class="grid"><div class="field"><label>Workout status</label><select id="logStatus"><option value="done" ${s.status==='done'?'selected':''}>Completed</option><option value="missed" ${s.status==='missed'?'selected':''}>Missed / skipped</option><option value="planned" ${s.status==='planned'?'selected':''}>Not logged yet</option></select></div><div class="field"><label>Actual distance (miles)</label><input id="logActual" type="number" min="0" max="150" step="0.1" value="${s.actual??s.miles}"></div><div class="field"><label>Actual average pace (mm:ss / mile)</label><input id="logPace" placeholder="10:15" value="${esc(s.actualPace||'')}"></div><div class="field"><label>Average heart rate (bpm)</label><input id="logHr" type="number" min="40" max="240" placeholder="Optional" value="${s.averageHr??''}"></div><div class="field"><label>Effort (RPE 1 = easy, 10 = max)</label><select id="logRpe"><option value="">Not sure</option>${Array.from({length:10},(_,i)=>`<option ${s.rpe===i+1?'selected':''}>${i+1}</option>`).join('')}</select></div><div class="field"><label>Fatigue today</label><select id="logFatigue"><option value="">Not sure</option>${['low','moderate','high'].map(x=>`<option ${s.fatigue===x?'selected':''} value="${x}">${x}</option>`).join('')}</select></div></div><div style="margin-top:14px"><label><input id="logPain" type="checkbox" ${s.pain?'checked':''}> Pain or injury concern during/after this session</label></div><div class="field" style="margin-top:12px"><label>How did it feel?</label><textarea id="logNotes" placeholder="Hot, hilly, hard breathing, recovery felt great...">${esc(s.notes||'')}</textarea></div>
+<div class="actions">
+  <button class="btn dark" type="submit">
+    Save run and review
+  </button>
+  <button
+    class="btn danger"
+    type="button"
+    onclick="deleteWorkoutLog(${wi}, ${di})">
+    Delete Run
+  </button>
+  <button class="btn light" type="button"
+    onclick="closeModal()">
+    Cancel
+  </button>
+</div>
+
 <button
   class="btn danger"
   type="button"
