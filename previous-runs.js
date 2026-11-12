@@ -48,7 +48,7 @@
     try {
       if(reset) before=null;
       const data=await invoke({action:"list",...(before?{before}:{})});
-      current=data.runs || [];
+      current=(data.runs || []).filter(run => !run.imported);
       before=data.nextBefore || null;
       moreButton.disabled=!data.hasMore;
       renderRuns();setStatus(`${current.length} runs shown on this page. ${selected.size} selected across pages.`);
@@ -71,7 +71,7 @@
       }
       setStatus(`${completed} imported, ${already} already present, ${failed} unsuccessful. No workouts were automatically marked complete.`);
       if(typeof loadRecentStravaRuns==="function")await loadRecentStravaRuns();
-      current=current.map(r=>!selected.has(r.id)&&ids.includes(r.id)?{...r,imported:true}:r);
+      current=current.filter(r=>!ids.includes(r.id) || selected.has(r.id));
     } catch(e){setStatus(`Import interrupted: ${e.message}. Successfully imported runs remain saved.`);}
     finally{busy=false;renderRuns();}
   }
