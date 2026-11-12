@@ -1771,14 +1771,7 @@ function openLog(wi,di){if(!requireAccount())return;let s=data.weeks[wi].session
     Cancel
   </button>
 </div>
-
-<button
-  class="btn danger"
-  type="button"
-  onclick="deleteWorkoutLog(${wi}, ${di})">
-  Delete Run
-</button>
->Cancel</button></div></form>`);
+</form>`);
 $('logForm').onsubmit=e=>{e.preventDefault();let status=$('logStatus').value,actual=+$('logActual').value;if(!Number.isFinite(actual)||actual<0||actual>150){toast('Enter a valid actual distance.');return}const ap=$('logPace').value.trim(),hr=numberOrNull('logHr');if(ap&&!paceMinutes(ap)){toast('Actual pace should look like 10:30.');return}if(hr!==null&&(!Number.isInteger(hr)||hr<40||hr>240)){toast('Average heart rate must be 40–240 bpm.');return}Object.assign(s,{actualPace:status==='done'?ap:'',averageHr:status==='done'?hr:null,status,actual:status==='done'?round(actual):null,rpe:status==='done'&&$('logRpe').value?+$('logRpe').value:null,fatigue:status==='done'?$('logFatigue').value:null,pain:$('logPain').checked,notes:$('logNotes').value});save();closeModal();render();toast('Workout log saved.');if(status==='done'||status==='missed')showPostRunFeedback(wi,di);}}
 // Post-run feedback is local, rules-based, and never changes a workout automatically.
 function showPostRunFeedback(wi,di){
