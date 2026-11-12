@@ -1565,9 +1565,11 @@ async function loadRecentStravaRuns() {
   list.innerHTML = '<p class="subtle">Loading your synced runs...</p>';
 
   try {
-    const { data: runs, error } = await supa.rpc(
-      'strava_my_activities'
-    );
+    
+const { data: runs, error } = await supa.rpc(
+  'strava_visible_activities'
+);
+
 
     if (error) throw error;
     
