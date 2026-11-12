@@ -1158,6 +1158,54 @@ function dashboardHrGuidance(type) {
   return `${label}: ~${minHr}-${maxHr} bpm`;
 }
 
+function deleteDashboardRun(wi, di, integrated) {
+  if (!requireAccount()) return;
+
+  const plan = integrated
+    ? portfolio.integratedPlan?.plan
+    : data;
+
+  const session = plan?.weeks?.[wi]?.sessions?.[di];
+
+  if (!session) {
+    toast('Workout not found.');
+    return;
+  }
+
+  if (
+    session.status !== 'done' &&
+    !session.stravaActivityId &&
+    session.actual == null
+  ) {
+    toast('No recorded run to delete.');
+    return;
+  }
+
+  if (!confirm(
+    'Delete this run log? Your planned workout will stay.'
+  )) return;
+
+  session.status = 'planned';
+
+  [
+    'actual',
+    'actualPace',
+    'averageHr',
+    'rpe',
+    'fatigue',
+    'pain',
+    'notes',
+    'stravaActivityId',
+    'stravaActivityDate',
+    'stravaActivityName'
+  ].forEach(key => delete session[key]);
+
+  save();
+  render();
+
+  toast('Run deleted. Planned workout preserved.');
+}
+
   function renderDashboardTrainingWeek(){
  const host=$('homeContent'),source=dashboardScheduleSource();
  if(!host||!source)return;
@@ -1192,7 +1240,30 @@ function dashboardHrGuidance(type) {
 
     <div class="muted">${esc(s.pace||'By effort')}</div>
     <div style="font-size:11px;color:${statusColor};font-weight:800;margin-top:7px">${status}</div>
-    ${canLog||Number(s.miles)>0?`<div class="actions">${canLog?`<button class="btn dark sm" type="button" onclick="${logAction}">${logged?'View log':'Log'}</button>`:''}<button class="btn light sm" type="button" onclick="${editAction}">Edit</button></div>`:''}
+    
+${canLog || Number(s.miles) > 0 ? `
+  <div class="actions">
+    ${canLog ? `
+      <button class="btn dark sm" type="button"
+        onclick="${logAction}">
+        ${logged ? 'View log' : 'Log'}
+      </button>
+    ` : ''}
+
+    <button class="btn light sm" type="button"
+      onclick="${editAction}">
+      Edit
+    </button>
+
+    ${logged || s.stravaActivityId || s.actual != null ? `
+      <button class="btn danger sm" type="button"
+        onclick="deleteDashboardRun(${wi}, ${di}, ${source.integrated})">
+        Delete Run
+      </button>
+    ` : ''}
+  </div>
+` : ''}
+`<div class="actions">${canLog?`<button class="btn dark sm" type="button" onclick="${logAction}">${logged?'View log':'Log'}</button>`:''}<button class="btn light sm" type="button" onclick="${editAction}">Edit</button></div>`:''}
    </div>`;
  }).join('');
  const section=document.createElement('section');
