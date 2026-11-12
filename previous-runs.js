@@ -106,7 +106,9 @@
   }
   function mount() {
     const target=$("recentStravaRuns");if(!target || $("previousRunsOpen"))return;
-    const actions=make("div","actions");const btn=button("Previous Runs · Import History",open,"btn dark sm");btn.id="previousRunsOpen";actions.append(btn);target.insertBefore(actions,target.firstChild);
+    const actions=make("div","actions");const btn=button("Previous Runs · Import History",open,"btn dark sm");btn.id="previousRunsOpen";actions.append(btn);
+target.insertBefore(actions, $("stravaRunsList"));
+
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",mount);else mount();
 })();
